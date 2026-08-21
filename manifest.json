@@ -1,0 +1,12 @@
+{
+  "name": "تعليمات تنفيذ العقود الحكومية لعام 2025",
+  "short_name": "تعليمات العقود",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f1e8",
+  "theme_color": "#123f3b",
+  "icons": [
+    { "src": "ministry-logo.jpg", "sizes": "554x554", "type": "image/jpeg" }
+  ]
+}
