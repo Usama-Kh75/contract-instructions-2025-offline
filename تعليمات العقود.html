@@ -1390,6 +1390,9 @@
     // --- Arabic Search Normalization & TF-IDF Ranking ---
     const q = s => String(s ?? '').normalize('NFKD')
       .replace(/[ً-ٰٟ]/g, '')
+      .replace(/ـ/g, '')
+      .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+      .replace(/[۰-۹]/g, d => d.charCodeAt(0) - 0x06F0)
       .replace(/[أإآٱ]/g, 'ا')
       .replace(/ى/g, 'ي')
       .replace(/ة/g, 'ه')
