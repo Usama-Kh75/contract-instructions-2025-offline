@@ -1340,7 +1340,25 @@
 
   <script>
     // --- Data & Integrity Handling ---
-    const data = JSON.parse(document.getElementById('appData').textContent);
+    function fatalDataError(msg) {
+      const b = document.createElement('div');
+      b.className = 'tamper-banner';
+      b.textContent = '⚠ ' + msg + ' — يُرجى الحصول على نسخة سليمة من مصدرها المعتمد.';
+      document.body.prepend(b);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(document.getElementById('appData').textContent);
+    } catch (err) {
+      fatalDataError('تعذّرت قراءة بيانات التعليمات؛ الملف تالف أو عُدِّل بصورة أفسدت بنيته');
+      throw err;
+    }
+    if (!data || !Array.isArray(data.clauses) || !Array.isArray(data.chapters) || !data.chapters.length) {
+      fatalDataError('بيانات التعليمات ناقصة أو غير مكتملة');
+      throw new Error('appData missing required arrays');
+    }
+
     let results = [], selectedId = null, selectedChapter = 1, chapterPage = 0, selectedKind = 'chapter';
     let currentZoom = 1;
 
@@ -1355,7 +1373,12 @@
     };
 
     const contentHash = fnv1a(JSON.stringify({ clauses: data.clauses, chapters: data.chapters, annexes: data.annexes, credit: data.credit }));
-    if (data.integrity && data.integrity !== contentHash) {
+    if (typeof data.integrity !== 'string' || !/^[0-9a-f]{8}$/.test(data.integrity)) {
+      const b = document.createElement('div');
+      b.className = 'tamper-banner';
+      b.textContent = '⚠ تنبيه: هذه النسخة لا تحمل بصمة تحقق صالحة، فلا يمكن تأكيد مطابقتها للنسخة الرسمية.';
+      document.body.prepend(b);
+    } else if (data.integrity !== contentHash) {
       const b = document.createElement('div');
       b.className = 'tamper-banner';
       b.textContent = '⚠ تنبيه: محتوى هذه النسخة لا يطابق بصمتها الأصلية، وقد يكون قد عُدِّل عن نسخته الرسمية.';
@@ -1370,7 +1393,11 @@
 
     // --- Dark Mode / Light Mode Theme Toggle ---
     const themeToggleBtn = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('contracts_app_theme') || 'light';
+    const themeStore = {
+      get() { try { return localStorage.getItem('contracts_app_theme'); } catch (e) { return null; } },
+      set(v) { try { localStorage.setItem('contracts_app_theme', v); } catch (e) { /* التخزين غير متاح — يبقى الوضع لهذه الجلسة فقط */ } }
+    };
+    const savedTheme = themeStore.get() || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeIcon(savedTheme);
 
@@ -1378,7 +1405,7 @@
       const cur = document.documentElement.getAttribute('data-theme');
       const next = cur === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('contracts_app_theme', next);
+      themeStore.set(next);
       updateThemeIcon(next);
     });
 
@@ -1481,11 +1508,32 @@
     // --- Copy Reference Helper ---
     function copyClauseText(c) {
       const textToCopy = `سند قانوني: تعليمات تنفيذ العقود الحكومية رقم (1) لسنة 2025\nالمصدر: ${c.article} - ${c.clause || ''}\nالموضوع: ${c.title}\nالصفحة: ${c.printedPage}\n\n«${c.officialText}»`;
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast('📋 تم نسخ النص والسند القانوني إلى الحافظة!');
-      }).catch(() => {
-        showToast('تعذر النسخ التلقائي');
-      });
+      const ok = () => showToast('📋 تم نسخ النص والسند القانوني إلى الحافظة!');
+      const fallback = () => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = textToCopy;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const done = document.execCommand && document.execCommand('copy');
+          document.body.removeChild(ta);
+          done ? ok() : showToast('تعذر النسخ التلقائي — يمكنك تحديد النص ونسخه يدوياً');
+        } catch (e) {
+          showToast('تعذر النسخ التلقائي — يمكنك تحديد النص ونسخه يدوياً');
+        }
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(ok).catch(fallback);
+        } else {
+          fallback();
+        }
+      } catch (e) {
+        fallback();
+      }
     }
 
     // --- Lightbox Functions ---
