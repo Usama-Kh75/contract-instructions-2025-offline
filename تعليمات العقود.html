@@ -206,6 +206,36 @@
       font-weight: 800;
     }
 
+    /* The owning organisation sits with the preparer, not with the ministry:
+       the right of the bar is the source authority, the left is who made this
+       copy and for whom. A quieter treatment than the ministry mark keeps the
+       title dominant. */
+    .org-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 12px 4px 6px;
+      border-radius: 50px;
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .org-mark {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .org-mark.is-missing {
+      display: none;
+    }
+
     .btn-action {
       display: inline-flex;
       align-items: center;
@@ -1109,18 +1139,19 @@
       max-height: 85vh;
       overflow: auto;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      /* margin:auto on the image centres it while it fits and still lets the
+         container scroll to every edge once it is larger — align/justify-center
+         would pin the overflow out of reach */
       padding: 10px;
     }
 
     .lightbox-img {
+      margin: auto;
       max-width: 100%;
       max-height: 80vh;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-      transition: transform 0.2s ease;
     }
 
     /* Toast Notification */
@@ -1273,6 +1304,10 @@
         </div>
       </div>
       <div class="topbar-end">
+        <span class="org-badge" id="orgBadge">
+          <img class="org-mark" id="orgLogo" src="basra-oil-logo.png" alt="">
+          <span>شركة نفط البصرة</span>
+        </span>
         <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
         <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>
         <button class="btn-action" id="indexButton" type="button">↩ الفهرس العام</button>
@@ -1450,6 +1485,14 @@
     if (data.credit) {
       let ct = document.getElementById('creditText');
       if (ct) ct.textContent = data.credit;
+    }
+
+    // The organisation mark is optional: if the file is not beside the HTML the
+    // name still shows, rather than a broken-image icon next to it.
+    const orgLogo = document.getElementById('orgLogo');
+    if (orgLogo) {
+      orgLogo.addEventListener('error', () => orgLogo.classList.add('is-missing'), { once: true });
+      if (orgLogo.complete && !orgLogo.naturalWidth) orgLogo.classList.add('is-missing');
     }
     // The computed hash is only "approved" when it matches the one shipped with
     // the data. On a mismatch, showing the recomputed hash under that label would
@@ -1711,12 +1754,40 @@
     const lightboxImg = document.getElementById('lightboxImg');
     const lightboxTitle = document.getElementById('lightboxTitle');
 
+    // Zoom changes the image's LAYOUT width, not its transform. A CSS transform
+    // leaves the layout box unchanged, so the scroll container never grows and
+    // the enlarged edges — the right-hand margin first, in an RTL page — fall
+    // outside the scrollable area and get clipped.
+    let lightboxBaseWidth = 0;
+
+    function applyZoom() {
+      if (currentZoom === 1 || !lightboxBaseWidth) {
+        lightboxImg.style.width = '';
+        lightboxImg.style.height = '';
+        lightboxImg.style.maxWidth = '';
+        lightboxImg.style.maxHeight = '';
+        return;
+      }
+      lightboxImg.style.maxWidth = 'none';
+      lightboxImg.style.maxHeight = 'none';
+      lightboxImg.style.width = Math.round(lightboxBaseWidth * currentZoom) + 'px';
+      lightboxImg.style.height = 'auto';
+    }
+
     function openLightbox(src, title) {
-      lightboxImg.src = src;
       lightboxTitle.textContent = title || 'معاينة الصفحة الرسمية';
       currentZoom = 1;
-      lightboxImg.style.transform = `scale(${currentZoom})`;
+      lightboxBaseWidth = 0;
+      lightboxImg.style.transform = '';
+      applyZoom();
+      lightboxImg.src = src;
       lightbox.classList.add('active');
+      // measure only once the modal is displayed, otherwise the width reads 0
+      const measure = () => {
+        lightboxBaseWidth = lightboxImg.getBoundingClientRect().width || lightboxImg.naturalWidth || 0;
+      };
+      if (lightboxImg.complete && lightboxImg.naturalWidth) measure();
+      else lightboxImg.addEventListener('load', measure, { once: true });
     }
 
     function closeLightbox() {
@@ -1725,16 +1796,16 @@
 
     document.getElementById('lightboxCloseBtn').addEventListener('click', closeLightbox);
     document.getElementById('zoomInBtn').addEventListener('click', () => {
-      currentZoom = Math.min(currentZoom + 0.25, 3);
-      lightboxImg.style.transform = `scale(${currentZoom})`;
+      currentZoom = Math.min(currentZoom + 0.25, 4);
+      applyZoom();
     });
     document.getElementById('zoomOutBtn').addEventListener('click', () => {
-      currentZoom = Math.max(currentZoom - 0.25, 0.6);
-      lightboxImg.style.transform = `scale(${currentZoom})`;
+      currentZoom = Math.max(currentZoom - 0.25, 1);
+      applyZoom();
     });
     document.getElementById('zoomResetBtn').addEventListener('click', () => {
       currentZoom = 1;
-      lightboxImg.style.transform = `scale(${currentZoom})`;
+      applyZoom();
     });
     lightbox.addEventListener('click', e => {
       if (e.target === lightbox || e.target === document.getElementById('lightboxBody')) closeLightbox();
