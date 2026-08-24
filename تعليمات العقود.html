@@ -1514,6 +1514,73 @@
       return m ? parseInt(m[1], 10) : 9999;
     };
 
+    // --- Clause Sequence Ordering ---
+    // The printed source numbers its clauses with Arabic ordinal words, then
+    // digits, then letters in abjad order (ا ب ج د ه و ز ح ط ي ...), not the
+    // modern alphabet. Results must follow that sequence, not relevance.
+    const CLAUSE_ORD = {
+      'اولا': 1, 'ثانيا': 2, 'ثالثا': 3, 'رابعا': 4, 'خامسا': 5,
+      'سادسا': 6, 'سابعا': 7, 'ثامنا': 8, 'تاسعا': 9, 'عاشرا': 10,
+      'حادي عشر': 11, 'احد عشر': 11,
+      'ثاني عشر': 12, 'اثنا عشر': 12, 'اثني عشر': 12,
+      'ثالث عشر': 13, 'ثلاثه عشر': 13,
+      'رابع عشر': 14, 'اربعه عشر': 14,
+      'خامس عشر': 15, 'خمسه عشر': 15,
+      'سادس عشر': 16, 'سته عشر': 16,
+      'سابع عشر': 17, 'سبعه عشر': 17,
+      'ثامن عشر': 18, 'ثمانيه عشر': 18,
+      'تاسع عشر': 19, 'تسعه عشر': 19,
+      'عشرون': 20, 'عشرين': 20,
+      'واحد وعشرون': 21, 'اثنان وعشرون': 22, 'ثلاثه وعشرون': 23,
+      'اربعه وعشرون': 24, 'خمسه وعشرون': 25, 'سته وعشرون': 26,
+      'سبعه وعشرون': 27, 'ثمانيه وعشرون': 28, 'تسعه وعشرون': 29
+    };
+
+    const ABJAD = ['ا', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ي',
+                   'ك', 'ل', 'م', 'ن', 'س', 'ع', 'ف', 'ص', 'ق', 'ر',
+                   'ش', 'ت', 'ث', 'خ', 'ذ', 'ض', 'ظ', 'غ'];
+
+    const normClause = s => String(s ?? '').normalize('NFKD')
+      .replace(/[ً-ٰٟ]/g, '')
+      .replace(/ـ/g, '')
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const segRank = p => {
+      if (!p) return 900;
+      if (p === 'الديباجه' || p === 'صدر الماده' || p === 'الماده كامله') return 0;
+      // annexes 6 and 8 number their own clauses as "المادة (N)"
+      const inner = p.match(/^الماده \((\d+)\)/);
+      if (inner) return 300 + parseInt(inner[1], 10);
+      if (CLAUSE_ORD[p] !== undefined) return CLAUSE_ORD[p];
+      const num = p.match(/^(\d+)/);
+      if (num) return 100 + parseInt(num[1], 10);
+      const letter = ABJAD.indexOf(p.charAt(0));
+      if (letter >= 0 && p.length <= 2) return 200 + letter;
+      return 900;
+    };
+
+    const clauseKey = lbl => normClause(lbl).split('/').map(x => segRank(x.trim()));
+
+    const cmpClause = (a, b) => {
+      const ka = clauseKey(a), kb = clauseKey(b);
+      const len = Math.max(ka.length, kb.length);
+      for (let i = 0; i < len; i++) {
+        // a shorter path is the parent clause, so it comes first
+        const x = ka[i] === undefined ? -1 : ka[i];
+        const y = kb[i] === undefined ? -1 : kb[i];
+        if (x !== y) return x - y;
+      }
+      return 0;
+    };
+
+    // المواد before الضوابط when both carry the same number
+    const kindRank = a => /^ضوابط/.test(String(a ?? '')) ? 1 : 0;
+
     function search(value) {
       const nq = q(value);
       if (!nq) return [];
@@ -1543,7 +1610,13 @@
         return { c: x.c, score };
       }).filter(r => r.score > 0).sort((a, b) => {
         const an = artNum(a.c.article), bn = artNum(b.c.article);
-        return an !== bn ? an - bn : b.score - a.score;
+        if (an !== bn) return an - bn;
+        const ak = kindRank(a.c.article), bk = kindRank(b.c.article);
+        if (ak !== bk) return ak - bk;
+        const cc = cmpClause(a.c.clause, b.c.clause);
+        if (cc !== 0) return cc;
+        if (a.c.pdfPage !== b.c.pdfPage) return a.c.pdfPage - b.c.pdfPage;
+        return b.score - a.score;
       }).map(r => r.c);
     }
 
