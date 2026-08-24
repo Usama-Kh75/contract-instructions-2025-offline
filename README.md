@@ -1,7 +1,7 @@
 # دليل تعليمات تنفيذ العقود العامة — رقم (1) لسنة 2025
 
 مرجع تفاعلي يعمل **بلا إنترنت**، في ملف HTML واحد يُفتح بالمتصفح مباشرةً.
-يفهرس التعليمات كاملةً: **42 مادة** في المتن و**20 ضابطة** ملحقة، في **1137 بنداً**،
+يفهرس التعليمات كاملةً: **42 مادة** في المتن و**20 ضابطة** ملحقة، في **1202 بنداً**،
 كلٌّ منها **منقول حرفياً** عن المطبوع ومُسنَد إلى **صورة صفحته الأصلية**.
 
 **إعداد: م. أسامة خليل هاشم — شركة نفط البصرة**
@@ -67,7 +67,7 @@
 <div dir="ltr">
 
 **Iraqi Public Contract Execution Instructions No. (1) of 2025 — offline interactive reference.**
-Single-file HTML, no server, no dependencies. 1137 clauses across 42 articles and 20 annexes,
+Single-file HTML, no server, no dependencies. 1202 clauses across 42 articles and 20 annexes,
 each transcribed verbatim and linked to a scan of its printed page.
 This repository excludes the 174 page images; request the full zip for the complete copy.
 
