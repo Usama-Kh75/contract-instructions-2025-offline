@@ -994,6 +994,15 @@
       transform: scale(1.02);
     }
 
+    .kicker.kicker-summary {
+      color: var(--text-subtle);
+    }
+
+    .fingerprint-bad {
+      color: #b3261e;
+      font-weight: 800;
+    }
+
     .img-missing {
       background: var(--card-bg);
       color: var(--text-main);
@@ -1442,7 +1451,20 @@
       let ct = document.getElementById('creditText');
       if (ct) ct.textContent = data.credit;
     }
-    document.getElementById('fingerprint').textContent = 'البصمة الرقمية المعتمدة: ' + contentHash;
+    // The computed hash is only "approved" when it matches the one shipped with
+    // the data. On a mismatch, showing the recomputed hash under that label would
+    // let a modified copy present its own fingerprint as proof of authenticity.
+    const fpEl = document.getElementById('fingerprint');
+    const fpValid = typeof data.integrity === 'string' && /^[0-9a-f]{8}$/.test(data.integrity);
+    if (fpValid && data.integrity === contentHash) {
+      fpEl.textContent = 'البصمة الرقمية المعتمدة: ' + contentHash;
+    } else if (fpValid) {
+      fpEl.classList.add('fingerprint-bad');
+      fpEl.textContent = 'البصمة المعتمدة: ' + data.integrity + ' — البصمة المحسوبة: ' + contentHash + ' (غير متطابقتين)';
+    } else {
+      fpEl.classList.add('fingerprint-bad');
+      fpEl.textContent = 'البصمة المحسوبة: ' + contentHash + ' — لا توجد بصمة معتمدة للمقارنة';
+    }
 
     const stampEl = document.getElementById('releaseStamp');
     if (stampEl) {
@@ -1510,7 +1532,10 @@
 
     const idf = t => Math.log(1 + idx.length / ((df[t] || 0) + 1));
     const artNum = a => {
-      const m = String(a ?? '').match(/\((\d+)\)/);
+      const s = String(a ?? '')
+        .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+        .replace(/[۰-۹]/g, d => d.charCodeAt(0) - 0x06F0);
+      const m = s.match(/\((\d+)\)/);
       return m ? parseInt(m[1], 10) : 9999;
     };
 
@@ -1609,10 +1634,12 @@
         }
         return { c: x.c, score };
       }).filter(r => r.score > 0).sort((a, b) => {
-        const an = artNum(a.c.article), bn = artNum(b.c.article);
-        if (an !== bn) return an - bn;
+        // the whole main body precedes the annexes in the printed document,
+        // so kind comes before number - otherwise article 6 lands after annex 5
         const ak = kindRank(a.c.article), bk = kindRank(b.c.article);
         if (ak !== bk) return ak - bk;
+        const an = artNum(a.c.article), bn = artNum(b.c.article);
+        if (an !== bn) return an - bn;
         const cc = cmpClause(a.c.clause, b.c.clause);
         if (cc !== 0) return cc;
         if (a.c.pdfPage !== b.c.pdfPage) return a.c.pdfPage - b.c.pdfPage;
@@ -1782,10 +1809,15 @@
         return;
       }
 
+      const verbatim = c.verbatim === true;
       const n = results.findIndex(x => x.id === c.id) + 1;
       const head = node('div', 'source-head');
       const titleDiv = node('div', '');
-      titleDiv.append(node('span', 'kicker', 'السند القانوني الرسمي'), node('h2', '', c.title));
+      titleDiv.append(
+        node('span', 'kicker' + (verbatim ? '' : ' kicker-summary'),
+             verbatim ? 'السند القانوني الرسمي' : 'نص مُلخَّص — لا يصلح للاستشهاد'),
+        node('h2', '', c.title)
+      );
       
       const marker = node('div', 'marker');
       marker.append(node('small', '', 'النتيجة'), node('strong', '', String(n).padStart(2, '0')));
@@ -1804,7 +1836,6 @@
       });
 
       // Quote with Copy Button
-      const verbatim = c.verbatim === true;
       const quote = node('div', verbatim ? 'quote' : 'quote summary');
       const quoteHead = node('div', 'quote-header');
       quoteHead.append(node('strong', '', verbatim ? '📜 النص الحرفي للتعليمات' : '📄 نص مُلخَّص — غير حرفي'));
@@ -1831,20 +1862,30 @@
       const toolbar = node('div', 'toolbar');
       toolbar.append(node('span', '', 'الصفحة المطبوعة رقم ' + c.printedPage));
       
+      // one flag guards every route into the viewer, so a failed image
+      // cannot lead the reader into a lightbox showing the same broken file
+      let pageImageOk = true;
+      const zoomPage = () => {
+        if (!pageImageOk) return;
+        openLightbox('.' + c.pageImage, c.title + ' — صفحة ' + c.printedPage);
+      };
+
       const openModalBtn = node('a', '', '🔍 تكبير وقراءة الصفحة');
       openModalBtn.href = '#';
       openModalBtn.addEventListener('click', e => {
         e.preventDefault();
-        openLightbox('.' + c.pageImage, c.title + ' — صفحة ' + c.printedPage);
+        zoomPage();
       });
       toolbar.append(openModalBtn);
 
       const imgWrapper = node('div', 'doc-img-wrapper');
-      imgWrapper.addEventListener('click', () => openLightbox('.' + c.pageImage, c.title + ' — صفحة ' + c.printedPage));
+      imgWrapper.addEventListener('click', zoomPage);
       const img = node('img', '');
       img.src = '.' + c.pageImage;
       img.alt = 'صورة الصفحة ' + c.printedPage;
       img.addEventListener('error', () => {
+        pageImageOk = false;
+        openModalBtn.remove();
         imgWrapper.replaceChildren();
         imgWrapper.style.cursor = 'default';
         const warn = node('div', 'img-missing');
