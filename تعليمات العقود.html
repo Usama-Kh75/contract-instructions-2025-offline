@@ -994,6 +994,27 @@
       transform: scale(1.02);
     }
 
+    .img-missing {
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 18px 16px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .img-missing strong {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .img-missing p {
+      margin: 4px 0;
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      word-break: break-all;
+    }
+
     .full-pdf {
       width: 100%;
       margin-top: 16px;
@@ -1725,6 +1746,17 @@
       const img = node('img', '');
       img.src = '.' + c.pageImage;
       img.alt = 'صورة الصفحة ' + c.printedPage;
+      img.addEventListener('error', () => {
+        imgWrapper.replaceChildren();
+        imgWrapper.style.cursor = 'default';
+        const warn = node('div', 'img-missing');
+        warn.append(
+          node('strong', '', '⚠️ تعذّر عرض صورة الصفحة ' + c.printedPage),
+          node('p', '', 'الملف المطلوب: ' + c.pageImage.replace(/^\//, '')),
+          node('p', '', 'مجلد «pages» غير موجود بجانب ملف «تعليمات العقود.html». أبقِ الملف والمجلد في المجلد نفسه؛ ولا تنقل ملف HTML وحده.')
+        );
+        imgWrapper.append(warn);
+      });
       imgWrapper.append(img);
 
       doc.append(toolbar, imgWrapper);
