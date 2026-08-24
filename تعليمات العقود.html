@@ -1040,6 +1040,32 @@
       font-weight: 800;
     }
 
+    .miss-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px dashed var(--card-border);
+      border-radius: var(--radius-md);
+      text-align: right;
+    }
+
+    .miss-box p {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      color: var(--text-subtle);
+    }
+
+    .miss-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-quiet {
+      background: transparent;
+      opacity: 0.75;
+    }
+
     .img-missing {
       background: var(--card-bg);
       color: var(--text-main);
@@ -1549,6 +1575,41 @@
       themeToggleBtn.title = t === 'dark' ? 'التحويل إلى الوضع النهاري' : 'التحويل إلى الوضع الليلي';
     }
 
+    // --- Failed Searches ---
+    // A search that returns nothing is the highest-signal thing this reference
+    // can learn: it means the reader's vocabulary and the ministry's diverged.
+    // Kept in this browser only — no network, no telemetry — because the copy
+    // lives on the reader's machine, not the author's. The reader exports it
+    // and sends it on if they choose to.
+    let lastQuery = '';
+    const missStore = {
+      key: 'contracts_app_misses',
+      read() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (e) { return []; } },
+      write(v) { try { localStorage.setItem(this.key, JSON.stringify(v.slice(-200))); } catch (e) { } },
+      add(text) {
+        const t = String(text || '').trim();
+        if (!t) return;
+        const list = this.read();
+        const hit = list.find(x => x.q === t);
+        if (hit) { hit.n++; hit.d = Date.now(); }
+        else list.push({ q: t, n: 1, d: Date.now() });
+        this.write(list);
+      },
+      clear() { try { localStorage.removeItem(this.key); } catch (e) { } },
+      asText() {
+        const list = this.read().slice().sort((a, b) => b.n - a.n || b.d - a.d);
+        if (!list.length) return '';
+        const ver = (typeof data.version === 'string' ? data.version : '—');
+        const lines = list.map(x => {
+          const dt = new Date(x.d);
+          const day = isNaN(dt) ? '' : dt.toISOString().slice(0, 10);
+          return `${x.n}×  «${x.q}»${day ? '   — آخر مرة ' + day : ''}`;
+        });
+        return 'استعلامات لم تُرجع أي نتيجة — دليل تعليمات العقود 2025 (إصدار ' + ver + ')\n'
+             + 'عددها: ' + list.length + '\n\n' + lines.join('\n');
+      }
+    };
+
     // --- Arabic Search Normalization & TF-IDF Ranking ---
     const q = s => String(s ?? '').normalize('NFKD')
       .replace(/[ً-ٰٟ]/g, '')
@@ -1728,7 +1789,12 @@
         ? ''
         : '\n\n[تنبيه: الصياغة أعلاه مختصرة للتيسير ولا تصلح للاستشهاد الرسمي. النص المعتمد في الصفحة المطبوعة المذكورة.]';
       const textToCopy = `${head}\nالمصدر: ${c.article} - ${c.clause || ''}\nالموضوع: ${c.title}\nالصفحة: ${c.printedPage}\n\n«${c.officialText}»${tail}`;
-      const ok = () => showToast('📋 تم نسخ النص والسند القانوني إلى الحافظة!');
+      copyPlainText(textToCopy, '📋 تم نسخ النص والسند القانوني إلى الحافظة!');
+    }
+
+    function copyPlainText(textToCopy, okMsg) {
+      if (!textToCopy) { showToast('لا يوجد ما يُنسخ'); return; }
+      const ok = () => showToast(okMsg || '📋 تم النسخ إلى الحافظة');
       const fallback = () => {
         try {
           const ta = document.createElement('textarea');
@@ -1828,11 +1894,29 @@
       document.getElementById('resultCount').textContent = results.length + ' نتيجة مطابقة';
 
       if (!results.length) {
+        missStore.add(lastQuery);
         const e = node('div', 'empty');
         e.append(
           node('h3', '', 'لم يتم العثور على مادة مطابقة'),
           node('p', '', 'جرّب كتابة مصطلح قانوني أقصر أو استخدام كلمات البحث السريعة أعلى الصفحة.')
         );
+
+        const misses = missStore.read();
+        if (misses.length) {
+          const box = node('div', 'miss-box');
+          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + misses.length + ' استعلاماً لم يُرجع نتيجة. إرسالها إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
+          const row = node('div', 'miss-actions');
+          const copyBtn = node('button', 'btn-copy', '📋 نسخ الاستعلامات غير الموفقة');
+          copyBtn.type = 'button';
+          copyBtn.addEventListener('click', () => copyPlainText(missStore.asText(), 'تم نسخ الاستعلامات — الصقها في رسالة إلى مُعِدّ الدليل'));
+          const clearBtn = node('button', 'btn-copy btn-quiet', '🗑 مسح السجل');
+          clearBtn.type = 'button';
+          clearBtn.addEventListener('click', () => { missStore.clear(); renderResults(); });
+          row.append(copyBtn, clearBtn);
+          box.append(row);
+          e.append(box);
+        }
+
         list.append(e);
         renderSource(null);
         return;
@@ -2080,6 +2164,7 @@
         return;
       }
       searchInput.value = value;
+      lastQuery = value;
       clearSearchBtn.style.display = 'block';
       results = search(value);
       selectedId = results[0]?.id || null;
