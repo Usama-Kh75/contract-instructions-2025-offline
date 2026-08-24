@@ -1172,17 +1172,27 @@
       max-height: 85vh;
       overflow: auto;
       display: flex;
-      /* margin:auto on the image centres it while it fits and still lets the
+      /* margin:auto on the stage centres it while it fits and still lets the
          container scroll to every edge once it is larger — align/justify-center
          would pin the overflow out of reach */
       padding: 10px;
     }
 
-    .lightbox-img {
+    /* The stage carries the layout box. When the image is turned a quarter
+       turn its rotated bounding box is its own height by its own width, and
+       only a real layout box that size lets the container scroll to the
+       edges — a rotated image on its own still occupies its unrotated box. */
+    .lightbox-stage {
       margin: auto;
-      max-width: 100%;
-      max-height: 80vh;
-      object-fit: contain;
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .lightbox-img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
       border-radius: 8px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.8);
     }
@@ -1440,12 +1450,15 @@
       <div class="lightbox-controls">
         <button class="lightbox-btn" id="zoomInBtn" type="button">➕ تكبير</button>
         <button class="lightbox-btn" id="zoomOutBtn" type="button">➖ تصغير</button>
+        <button class="lightbox-btn" id="rotateBtn" type="button" title="تدوير ربع دورة — يُحفظ للصفحة">⟳ تدوير</button>
         <button class="lightbox-btn" id="zoomResetBtn" type="button">🔄 إعادة ضبط</button>
         <button class="lightbox-btn" id="lightboxCloseBtn" type="button">✕ إغلاق</button>
       </div>
     </div>
     <div class="lightbox-body" id="lightboxBody">
-      <img class="lightbox-img" id="lightboxImg" alt="صورة الصفحة المكبرة">
+      <div class="lightbox-stage" id="lightboxStage">
+        <img class="lightbox-img" id="lightboxImg" alt="صورة الصفحة المكبرة">
+      </div>
     </div>
   </div>
 
@@ -25299,41 +25312,74 @@
     const lightboxImg = document.getElementById('lightboxImg');
     const lightboxTitle = document.getElementById('lightboxTitle');
 
-    // Zoom changes the image's LAYOUT width, not its transform. A CSS transform
-    // leaves the layout box unchanged, so the scroll container never grows and
-    // the enlarged edges — the right-hand margin first, in an RTL page — fall
-    // outside the scrollable area and get clipped.
-    let lightboxBaseWidth = 0;
+    const lightboxStage = document.getElementById('lightboxStage');
+    const lightboxBody = document.getElementById('lightboxBody');
 
-    function applyZoom() {
-      if (currentZoom === 1 || !lightboxBaseWidth) {
-        lightboxImg.style.width = '';
-        lightboxImg.style.height = '';
-        lightboxImg.style.maxWidth = '';
-        lightboxImg.style.maxHeight = '';
-        return;
+    // Zoom and rotation both change the stage's LAYOUT size, not just the
+    // image's transform. A CSS transform leaves the layout box unchanged, so
+    // the scroll container never grows and the edges — the right-hand margin
+    // first, in an RTL page — fall outside the scrollable area and get clipped.
+    let lightboxRotation = 0;
+    let lightboxSrc = '';
+
+    // Pages 88 and 91 of the source print their tables a quarter turn off, so
+    // a reader turns them on every visit. Remember the turn per page, on this
+    // device only — same as the failed-search log, no telemetry.
+    const rotStore = {
+      key: 'contracts_app_page_rotation',
+      read() { try { return JSON.parse(localStorage.getItem(this.key) || '{}'); } catch (e) { return {}; } },
+      get(src) {
+        const v = this.read()[src];
+        return typeof v === 'number' ? ((v % 360) + 360) % 360 : 0;
+      },
+      set(src, deg) {
+        try {
+          const m = this.read();
+          if (deg) m[src] = deg; else delete m[src];
+          localStorage.setItem(this.key, JSON.stringify(m));
+        } catch (e) { }
       }
-      lightboxImg.style.maxWidth = 'none';
-      lightboxImg.style.maxHeight = 'none';
-      lightboxImg.style.width = Math.round(lightboxBaseWidth * currentZoom) + 'px';
-      lightboxImg.style.height = 'auto';
+    };
+
+    function applyView() {
+      const nw = lightboxImg.naturalWidth, nh = lightboxImg.naturalHeight;
+      if (!nw || !nh) return;
+      // measure the viewport, never the container: the modal is a centred
+      // column flex, so the body shrinks to fit its content — reading its
+      // width back here would feed the stage's own size into the scale
+      const availW = Math.max(120, window.innerWidth * 0.9 - 40);
+      const availH = Math.max(120, window.innerHeight * 0.80 - 40);
+      // a quarter turn swaps which of the image's own sides faces the viewport
+      const swap = lightboxRotation % 180 !== 0;
+      const scale = Math.min(availW / (swap ? nh : nw), availH / (swap ? nw : nh), 1) * currentZoom;
+      const w = Math.round(nw * scale), h = Math.round(nh * scale);
+      lightboxImg.style.width = w + 'px';
+      lightboxImg.style.height = h + 'px';
+      lightboxImg.style.transform = 'translate(-50%, -50%) rotate(' + lightboxRotation + 'deg)';
+      lightboxStage.style.width = (swap ? h : w) + 'px';
+      lightboxStage.style.height = (swap ? w : h) + 'px';
     }
 
     function openLightbox(src, title) {
       lightboxTitle.textContent = title || 'معاينة الصفحة الرسمية';
       currentZoom = 1;
-      lightboxBaseWidth = 0;
-      lightboxImg.style.transform = '';
-      applyZoom();
+      lightboxSrc = src;
+      lightboxRotation = rotStore.get(src);
+      lightboxImg.style.width = '';
+      lightboxImg.style.height = '';
+      lightboxStage.style.width = '';
+      lightboxStage.style.height = '';
       lightboxImg.src = src;
       lightbox.classList.add('active');
-      // measure only once the modal is displayed, otherwise the width reads 0
-      const measure = () => {
-        lightboxBaseWidth = lightboxImg.getBoundingClientRect().width || lightboxImg.naturalWidth || 0;
-      };
-      if (lightboxImg.complete && lightboxImg.naturalWidth) measure();
-      else lightboxImg.addEventListener('load', measure, { once: true });
+      // a cached image is already complete and fires no load event; an
+      // uncached one is laid out by the standing load listener below
+      if (lightboxImg.complete && lightboxImg.naturalWidth) applyView();
     }
+
+    // one standing listener rather than a per-opening one: an image that never
+    // loads would otherwise leave its handler pending until some later image
+    // loaded and fired the whole accumulated pile
+    lightboxImg.addEventListener('load', applyView);
 
     function closeLightbox() {
       lightbox.classList.remove('active');
@@ -25342,21 +25388,35 @@
     document.getElementById('lightboxCloseBtn').addEventListener('click', closeLightbox);
     document.getElementById('zoomInBtn').addEventListener('click', () => {
       currentZoom = Math.min(currentZoom + 0.25, 4);
-      applyZoom();
+      applyView();
     });
     document.getElementById('zoomOutBtn').addEventListener('click', () => {
       currentZoom = Math.max(currentZoom - 0.25, 1);
-      applyZoom();
+      applyView();
+    });
+    document.getElementById('rotateBtn').addEventListener('click', () => {
+      lightboxRotation = (lightboxRotation + 90) % 360;
+      rotStore.set(lightboxSrc, lightboxRotation);
+      applyView();
     });
     document.getElementById('zoomResetBtn').addEventListener('click', () => {
       currentZoom = 1;
-      applyZoom();
+      lightboxRotation = 0;
+      rotStore.set(lightboxSrc, 0);
+      applyView();
+    });
+    window.addEventListener('resize', () => {
+      if (lightbox.classList.contains('active')) applyView();
     });
     lightbox.addEventListener('click', e => {
-      if (e.target === lightbox || e.target === document.getElementById('lightboxBody')) closeLightbox();
+      if (e.target === lightbox || e.target === lightboxBody || e.target === lightboxStage) closeLightbox();
     });
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeLightbox();
+      // 'r' and 'ق' are the same physical key on the two layouts in use here
+      if (lightbox.classList.contains('active') && (e.key === 'r' || e.key === 'R' || e.key === 'ق')) {
+        document.getElementById('rotateBtn').click();
+      }
     });
 
     // --- Render Search Results ---
