@@ -224,11 +224,18 @@
       white-space: nowrap;
     }
 
+    /* The mark is a 1.6:1 landscape logo on a near-white plate, not a square
+       transparent glyph: no circular crop (it would cut the arcs), and it keeps
+       its own light plate so it does not read as a stray white block in dark
+       mode. Its Arabic wordmark is unreadable at this size, which is why the
+       name still sits beside it. */
     .org-mark {
-      width: 22px;
-      height: 22px;
+      height: 26px;
+      width: auto;
       object-fit: contain;
-      border-radius: 50%;
+      background: #f8f8f8;
+      border-radius: 5px;
+      padding: 1px 3px;
       flex-shrink: 0;
     }
 
@@ -1305,7 +1312,7 @@
       </div>
       <div class="topbar-end">
         <span class="org-badge" id="orgBadge">
-          <img class="org-mark" id="orgLogo" src="basra-oil-logo.png" alt="">
+          <img class="org-mark" id="orgLogo" src="basra-oil-logo.jpg" alt="">
           <span>شركة نفط البصرة</span>
         </span>
         <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
