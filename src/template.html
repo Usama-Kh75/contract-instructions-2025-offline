@@ -1069,6 +1069,8 @@
       opacity: 0.85;
     }
 
+    .via-loose { opacity: 0.6; }
+
     .via-tag {
       display: inline-block;
       margin-top: 6px;
@@ -1591,6 +1593,9 @@
     // whether the reader accepted the concept layer's offer for THIS query;
     // it resets on every new search, so the expansion is never sticky
     let conceptAdded = false;
+    // scattered-word matches start folded; they are disclosed and counted,
+    // never dropped
+    let looseShown = false;
     // set only by the click, so a re-render for any other reason does not
     // yank the reader back to the divider
     let conceptJustAdded = false;
@@ -2087,6 +2092,26 @@
       }
     });
 
+    // Substring AND lets a clause qualify with the query's words scattered
+    // anywhere in it. «فتح العطاءات» returns 67 clauses and only 19 are about
+    // opening bids; the rest merely contain both words somewhere. Splitting
+    // the two is what keeps a long result list readable.
+    const idxById = new Map(idx.map(x => [x.c.id, x]));
+
+    function hasPhrase(c, nq) {
+      const x = idxById.get(c.id);
+      if (!x) return false;
+      // Each field on its own: joining them would let a phrase straddle the
+      // boundary between a title and the text under it.
+      // `meta` is deliberately excluded. It carries the category, which
+      // labels a whole article - «متطلبات الادراج والكلفة التخمينية» marks
+      // every clause of المادة (4)/أولاً, including «تحديد الجهة المنفذة»,
+      // which has nothing to do with estimated cost. Counting that as a
+      // phrase match is the dilution this split exists to undo.
+      return x.title.includes(nq) || x.keywords.includes(nq) ||
+             x.official.includes(nq) || x.explain.includes(nq);
+    }
+
     // --- Offline (web copy only) ---
     // A service worker exists only over http(s). Opened from disk the file is
     // already offline by definition, so none of this applies and the control
@@ -2251,7 +2276,7 @@
         return;
       }
 
-      const card = (c, i, via) => {
+      const card = (c, i, via, tag) => {
         const b = node('button', 'result-card' + (c.id === selectedId ? ' selected' : ''));
         b.type = 'button';
         b.dataset.id = c.id;
@@ -2265,12 +2290,37 @@
         );
         // a clause is never shown without saying why it is here
         if (via) body.append(node('span', 'via-tag', 'عُثر عليه بصيغة: ' + via));
+        else if (tag) body.append(node('span', 'via-tag via-loose', tag));
         b.append(body, node('span', 'check', '✓'));
         b.addEventListener('click', () => selectResult(c.id));
         return b;
       };
 
-      results.forEach((c, i) => list.append(card(c, i)));
+      // a one-word query has no phrase to speak of - every match contains it
+      const nq = q(lastQuery);
+      const phraseQuery = nq.includes(' ');
+      const exact = phraseQuery ? results.filter(c => hasPhrase(c, nq)) : results;
+      const loose = phraseQuery ? results.filter(c => !hasPhrase(c, nq)) : [];
+
+      exact.forEach((c, i) => list.append(card(c, i)));
+
+      if (loose.length) {
+        if (looseShown) {
+          list.append(node('div', 'concept-divider',
+            'وردت فيها كلماتك متفرّقةً لا كعبارة (' + loose.length + ')'));
+          loose.forEach((c, i) => list.append(card(c, exact.length + i, null, 'كلماتك متفرّقة في هذا البند')));
+        } else {
+          const bar = node('div', 'concept-bar');
+          bar.append(node('p', '',
+            'وهناك ' + loose.length + ' بنداً وردت فيها كلماتك متفرّقةً في مواضع مختلفة، لا كعبارة واحدة. ' +
+            'أكثرها ليس عن موضوعك، ولذلك أُخّرت.'));
+          const show = node('button', 'btn-copy btn-quiet', 'أظهرها');
+          show.type = 'button';
+          show.addEventListener('click', () => { looseShown = true; renderResults(); });
+          bar.append(show);
+          list.append(bar);
+        }
+      }
 
       if (found) {
         if (conceptAdded) {
@@ -2302,12 +2352,16 @@
         }
       }
 
-      shownResults = found && conceptAdded ? results.concat(found.extras.map(x => x.clause)) : results;
+      shownResults = exact
+        .concat(looseShown ? loose : [])
+        .concat(found && conceptAdded ? found.extras.map(x => x.clause) : []);
       const added = found && conceptAdded ? found.extras.length : 0;
+      const parts = [];
+      if (exact.length) parts.push(exact.length + (phraseQuery ? ' نتيجة بالعبارة' : ' نتيجة مطابقة'));
+      if (loose.length) parts.push(loose.length + ' متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
+      if (added) parts.push(added + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent =
-        results.length
-          ? results.length + ' نتيجة مطابقة' + (added ? ' + ' + added + ' بصيغ أخرى' : '')
-          : (added ? added + ' نتيجة بصيغ أخرى للمفهوم' : 'لا نتيجة بهذه الصيغة');
+        parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة';
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
       renderSource(selected || null);
@@ -2525,6 +2579,7 @@
       // previous query's list and open an unrelated clause
       shownResults = [];
       conceptAdded = false;
+      looseShown = false;
       lastQuery = '';
       selectedId = null;
       document.getElementById('workspace').classList.remove('visible');
@@ -2542,6 +2597,7 @@
       lastQuery = value;
       conceptAdded = false;
       conceptJustAdded = false;
+      looseShown = false;
       clearSearchBtn.style.display = 'block';
       results = search(value);
       selectedId = results[0]?.id || null;
