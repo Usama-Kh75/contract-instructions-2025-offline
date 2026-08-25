@@ -1228,6 +1228,37 @@
       padding: 10px;
     }
 
+    .lightbox-title { font-weight: 800; font-size: 1rem; }
+
+    /* On a phone the control row cannot sit beside the title: the buttons
+       overflow past the screen edge and «إغلاق» - the only way out - goes
+       with them. Stack them instead, and put the header in the flow so it
+       can never overlap the image. */
+    @media (max-width: 760px) {
+      .lightbox-modal { justify-content: flex-start; padding: 10px; }
+
+      .lightbox-header {
+        position: static;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .lightbox-title { width: 100%; font-size: 0.88rem; text-align: center; }
+
+      .lightbox-controls {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .lightbox-btn { padding: 7px 12px; font-size: 0.8rem; }
+
+      .lightbox-body { max-height: 70vh; max-width: 100vw; }
+    }
+
     /* The stage carries the layout box. When the image is turned a quarter
        turn its rotated bounding box is its own height by its own width, and
        only a real layout box that size lets the container scroll to the
@@ -1496,7 +1527,7 @@
   <!-- Lightbox Modal for Zooming Scanned Pages -->
   <div class="lightbox-modal" id="lightboxModal">
     <div class="lightbox-header">
-      <span id="lightboxTitle" style="font-weight: 800; font-size: 1rem;"></span>
+      <span class="lightbox-title" id="lightboxTitle"></span>
       <div class="lightbox-controls">
         <button class="lightbox-btn" id="zoomInBtn" type="button">➕ تكبير</button>
         <button class="lightbox-btn" id="zoomOutBtn" type="button">➖ تصغير</button>
@@ -1930,6 +1961,7 @@
     // the scroll container never grows and the edges — the right-hand margin
     // first, in an RTL page — fall outside the scrollable area and get clipped.
     let lightboxRotation = 0;
+    let lightboxHistory = false;
     let lightboxSrc = '';
 
     // Pages 88 and 91 of the source print their tables a quarter turn off, so
@@ -1958,10 +1990,19 @@
       // column flex, so the body shrinks to fit its content — reading its
       // width back here would feed the stage's own size into the scale
       const availW = Math.max(120, window.innerWidth * 0.9 - 40);
-      const availH = Math.max(120, window.innerHeight * 0.80 - 40);
+      // the phone layout spends vertical room on the stacked header row
+      const narrow = window.innerWidth <= 760;
+      const availH = Math.max(120, window.innerHeight * (narrow ? 0.66 : 0.80) - 40);
       // a quarter turn swaps which of the image's own sides faces the viewport
       const swap = lightboxRotation % 180 !== 0;
-      const scale = Math.min(availW / (swap ? nh : nw), availH / (swap ? nw : nh), 1) * currentZoom;
+      // A landscape table turned upright on a portrait phone must not be
+      // squeezed into the narrow width - that makes it SMALLER than before
+      // the turn, which is the opposite of what the reader asked for. Fill
+      // the height instead and let them pan sideways.
+      const base = narrow && swap
+        ? Math.min(availH / nw, 1)
+        : Math.min(availW / (swap ? nh : nw), availH / (swap ? nw : nh), 1);
+      const scale = base * currentZoom;
       const w = Math.round(nw * scale), h = Math.round(nh * scale);
       lightboxImg.style.width = w + 'px';
       lightboxImg.style.height = h + 'px';
@@ -1981,6 +2022,12 @@
       lightboxStage.style.height = '';
       lightboxImg.src = src;
       lightbox.classList.add('active');
+      // Installed to a home screen there is no browser chrome, so the phone's
+      // own back gesture is the reflex for "get out of this picture" - and
+      // without a history entry to consume it, it leaves the app entirely.
+      if (!lightboxHistory) {
+        try { history.pushState({ lightbox: true }, ''); lightboxHistory = true; } catch (e) { }
+      }
       // a cached image is already complete and fires no load event; an
       // uncached one is laid out by the standing load listener below
       if (lightboxImg.complete && lightboxImg.naturalWidth) applyView();
@@ -1991,11 +2038,22 @@
     // loaded and fired the whole accumulated pile
     lightboxImg.addEventListener('load', applyView);
 
-    function closeLightbox() {
+    // fromPop: the reader pressed Back, so the entry is already gone and
+    // calling history.back() again would take them off the page
+    function closeLightbox(fromPop) {
       lightbox.classList.remove('active');
+      const had = lightboxHistory;
+      lightboxHistory = false;
+      if (had && fromPop !== true) {
+        try { history.back(); } catch (e) { }
+      }
     }
 
-    document.getElementById('lightboxCloseBtn').addEventListener('click', closeLightbox);
+    window.addEventListener('popstate', () => {
+      if (lightbox.classList.contains('active')) closeLightbox(true);
+    });
+
+    document.getElementById('lightboxCloseBtn').addEventListener('click', () => closeLightbox());
     document.getElementById('zoomInBtn').addEventListener('click', () => {
       currentZoom = Math.min(currentZoom + 0.25, 4);
       applyView();
@@ -2022,7 +2080,7 @@
       if (e.target === lightbox || e.target === lightboxBody || e.target === lightboxStage) closeLightbox();
     });
     window.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'Escape') closeLightbox();   // never a popstate
       // 'r' and 'ق' are the same physical key on the two layouts in use here
       if (lightbox.classList.contains('active') && (e.key === 'r' || e.key === 'R' || e.key === 'ق')) {
         document.getElementById('rotateBtn').click();
