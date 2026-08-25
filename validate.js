@@ -168,6 +168,20 @@ for (const k of concepts) {
   }
 }
 
+// ── 9. تصادم أسماء الدوال في القالب ──────────────────────────────────────
+// تعريفان بالاسم نفسه لا يُعدّان خطأً في JavaScript: الأخير يفوز بصمت
+// ويُبطل الأول. وقع ذلك فعلاً حين حمل فاصلُ النتائج ومطابقةُ المفاهيم اسم
+// «hasPhrase» كلاهما، فتعطّل الفصل كله ولم يشتكِ شيء.
+const tpl = fs.readFileSync(path.join(SRC, 'template.html'), 'utf8');
+const script = tpl.slice(tpl.indexOf('<script>', tpl.indexOf('</style>')));
+const decls = {};
+for (const m of script.matchAll(/^\s*function\s+([A-Za-z_$][\w$]*)\s*\(/gm)) {
+  decls[m[1]] = (decls[m[1]] || 0) + 1;
+}
+for (const [name, n] of Object.entries(decls)) {
+  if (n > 1) fail('القالب: الدالة «' + name + '» معرَّفة ' + n + ' مرات — الأخيرة تُبطل ما قبلها بصمت');
+}
+
 // ── التقرير ───────────────────────────────────────────────────────────────
 console.log('بنود: ' + clauses.length + '  |  وحدات: ' + order.length +
             '  |  حرفية: ' + clauses.filter(c => c.verbatim === true).length +

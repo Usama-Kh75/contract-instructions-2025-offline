@@ -25662,7 +25662,7 @@
     // the two is what keeps a long result list readable.
     const idxById = new Map(idx.map(x => [x.c.id, x]));
 
-    function hasPhrase(c, nq) {
+    function clauseHasPhrase(c, nq) {
       const x = idxById.get(c.id);
       if (!x) return false;
       // Each field on its own: joining them would let a phrase straddle the
@@ -25863,8 +25863,8 @@
       // a one-word query has no phrase to speak of - every match contains it
       const nq = q(lastQuery);
       const phraseQuery = nq.includes(' ');
-      const exact = phraseQuery ? results.filter(c => hasPhrase(c, nq)) : results;
-      const loose = phraseQuery ? results.filter(c => !hasPhrase(c, nq)) : [];
+      const exact = phraseQuery ? results.filter(c => clauseHasPhrase(c, nq)) : results;
+      const loose = phraseQuery ? results.filter(c => !clauseHasPhrase(c, nq)) : [];
 
       exact.forEach((c, i) => list.append(card(c, i)));
 
