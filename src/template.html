@@ -1069,6 +1069,24 @@
       opacity: 0.85;
     }
 
+    /* the evidence line: the printed wording that actually matched */
+    .snippet {
+      margin-top: 6px;
+      font-size: 0.84rem;
+      line-height: 1.75;
+      opacity: 0.9;
+      border-right: 2px solid var(--primary-light);
+      padding-right: 8px;
+    }
+
+    .snippet mark.hl {
+      background: rgba(217, 164, 65, 0.35);
+      color: inherit;
+      border-radius: 3px;
+      padding: 0 2px;
+      font-weight: 800;
+    }
+
     .via-loose { opacity: 0.6; }
 
     .via-tag {
@@ -2235,6 +2253,40 @@
       return { def: k.def, extras, wordings: [...wordings] };
     }
 
+    // Show WHY a clause matched. The card carries a title and a plain-language
+    // explanation; when the match lives in the official text - as it does for
+    // «الكلفة التخمينية» in ضوابط (16)/رابعاً/6 - the reader sees a result with
+    // no visible reason for being there, and has to open all 68 to find out.
+    //
+    // Marking is at WORD granularity on purpose. Mapping a normalised offset
+    // back to the original string is a trap: NFKD changes lengths, diacritics
+    // and tatweel vanish, and runs of punctuation collapse to one space. A
+    // whole marked word reads the same and cannot land mid-letter.
+    function snippetNodes(text, tokens, radius) {
+      const parts = String(text ?? '').split(/(\s+)/);
+      const isGap = x => /^\s+$/.test(x);
+      const hit = i => {
+        if (isGap(parts[i])) return false;
+        const w = q(parts[i]);
+        return !!w && tokens.some(t => w.includes(t));
+      };
+      let first = -1;
+      for (let i = 0; i < parts.length; i++) if (hit(i)) { first = i; break; }
+      if (first < 0) return null;
+
+      const from = Math.max(0, first - radius * 2);
+      const to = Math.min(parts.length, first + radius * 4);
+      const frag = document.createDocumentFragment();
+      if (from > 0) frag.append('… ');
+      for (let i = from; i < to; i++) {
+        if (isGap(parts[i])) frag.append(parts[i]);
+        else if (hit(i)) frag.append(node('mark', 'hl', parts[i]));
+        else frag.append(parts[i]);
+      }
+      if (to < parts.length) frag.append(' …');
+      return frag;
+    }
+
     // --- Render Search Results ---
     function renderResults() {
       const list = document.getElementById('resultList');
@@ -2289,6 +2341,22 @@
           node('p', '', c.explanation)
         );
         // a clause is never shown without saying why it is here
+        // every result should be able to show its own evidence: the printed
+        // text first, then the plain-language note, then the keywords - the
+        // title needs no snippet because it is already on the card
+        const snip = qTokens.length
+          ? (snippetNodes(c.officialText, qTokens, 6)
+             || snippetNodes(c.explanation, qTokens, 6)
+             || snippetNodes((c.keywords || []).join(' ، '), qTokens, 6)
+             // last resort: the clause qualified through its category alone,
+             // which is exactly why it sits in the folded tier - say so
+             || snippetNodes([c.category, c.article, c.clause].join(' ، '), qTokens, 6))
+          : null;
+        if (snip) {
+          const line = node('p', 'snippet');
+          line.append(snip);
+          body.append(line);
+        }
         if (via) body.append(node('span', 'via-tag', 'عُثر عليه بصيغة: ' + via));
         else if (tag) body.append(node('span', 'via-tag via-loose', tag));
         b.append(body, node('span', 'check', '✓'));
@@ -2299,6 +2367,7 @@
       // a one-word query has no phrase to speak of - every match contains it
       const nq = q(lastQuery);
       const phraseQuery = nq.includes(' ');
+      const qTokens = nq.split(' ').filter(t => t.length > 1);
       const exact = phraseQuery ? results.filter(c => clauseHasPhrase(c, nq)) : results;
       const loose = phraseQuery ? results.filter(c => !clauseHasPhrase(c, nq)) : [];
 
