@@ -118,6 +118,16 @@ function main() {
   }
 
   fs.writeFileSync(OUT, out, 'utf8');
+  // نسخة باسم index.html لأجل النشر على الويب: الرابط العربي يُرمَّز إلى
+  // طلاسم في شريط العنوان، و«الصفحة الافتراضية» تحتاج هذا الاسم بعينه
+  fs.writeFileSync(path.join(ROOT, 'index.html'), out, 'utf8');
+  // عامل الخدمة يحمل رقم الإصدار ليُبطل مخزن الإصدار السابق
+  const meta = readJson(path.join(SRC, 'meta.json'));
+  fs.writeFileSync(
+    path.join(ROOT, 'sw.js'),
+    lf(fs.readFileSync(path.join(SRC, 'sw.js'), 'utf8')).replace('@@VERSION@@', meta.version),
+    'utf8'
+  );
   fs.writeFileSync(STAMP, fnv1a(out) + '\n', 'utf8');
 
   console.log('بنود   : ' + data.clauses.length + ' (منها ' + data.clauses.filter(c => c.verbatim === true).length + ' حرفياً)');

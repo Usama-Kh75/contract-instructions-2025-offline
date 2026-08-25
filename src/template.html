@@ -1080,6 +1080,16 @@
       opacity: 0.9;
     }
 
+    .offline-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .offline-status { font-size: 0.82rem; opacity: 0.85; }
+
     .miss-box {
       margin-top: 18px;
       padding: 14px 16px;
@@ -1515,6 +1525,10 @@
       <div class="footer-meta">
         <span class="release-stamp" id="releaseStamp"></span>
         <span class="fingerprint" id="fingerprint"></span>
+        <span class="offline-box" id="offlineBox" hidden>
+          <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ الصفحات للعمل بلا إنترنت (33 م.ب)</button>
+          <span class="offline-status" id="offlineStatus"></span>
+        </span>
       </div>
     </div>
   </footer>
@@ -2014,6 +2028,52 @@
         document.getElementById('rotateBtn').click();
       }
     });
+
+    // --- Offline (web copy only) ---
+    // A service worker exists only over http(s). Opened from disk the file is
+    // already offline by definition, so none of this applies and the control
+    // below never appears.
+    const isWebCopy = location.protocol === 'https:' || location.protocol === 'http:';
+    if (isWebCopy && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => { });
+      });
+    }
+
+    // Downloading all 174 page scans is 33 MB of somebody's mobile data.
+    // It happens on an explicit press, never on its own, and reports progress.
+    async function cacheAllPages(btn, status) {
+      if (!('caches' in window)) { status.textContent = 'متصفحك لا يدعم الحفظ للعمل بلا إنترنت.'; return; }
+      btn.disabled = true;
+      const cache = await caches.open('pages-v1');
+      const total = 174;
+      let done = 0, failed = 0;
+      for (let p = 7; p <= 180 && p - 6 <= total; p++) {
+        const url = './pages/page-' + p + '.jpg';
+        try {
+          if (!(await cache.match(url))) {
+            const res = await fetch(url);
+            if (res.ok) await cache.put(url, res.clone()); else failed++;
+          }
+        } catch (e) { failed++; }
+        done++;
+        status.textContent = 'يجري الحفظ… ' + done + ' من ' + total;
+      }
+      status.textContent = failed
+        ? 'حُفظت ' + (done - failed) + ' صفحة، وتعذّرت ' + failed + '. أعد المحاولة عند اتصال أفضل.'
+        : '✔ حُفظت كل الصفحات. يعمل الدليل الآن بلا إنترنت.';
+      btn.disabled = false;
+    }
+
+    {
+      const box = document.getElementById('offlineBox');
+      const btn = document.getElementById('offlineBtn');
+      const status = document.getElementById('offlineStatus');
+      if (box && btn && isWebCopy && 'caches' in window) {
+        box.hidden = false;
+        btn.addEventListener('click', () => cacheAllPages(btn, status));
+      }
+    }
 
     // --- Concept Layer ---
     // The document names one thing several ways: التأمينات is also خطاب ضمان,

@@ -8,15 +8,16 @@
 
 ---
 
-## ⚠️ مهم: هذا المستودع لا يحتوي صور الصفحات
+## على الهاتف — افتحه برابط
 
-مجلد `pages` (174 صورة، نحو 55 ميغابايت) **مستثنى من المستودع** لكِبَره.
+**https://usama-kh75.github.io/contract-instructions-2025-offline/**
 
-فإن نزّلتَ الملفات من GitHub وفتحتَ الـ HTML، **سيعمل النص والبحث كاملاً،
-لكن كل صورة صفحة ستظهر رسالة تعذّر** — وميزة التحقق من الأصل المطبوع هي
-جوهر هذا المرجع.
+يعمل على أي هاتف بلا تنزيل ولا فكّ ضغط. ومن قائمة المتصفح «إضافة إلى الشاشة
+الرئيسية» يصير تطبيقاً قائماً بذاته.
 
-**للنسخة الكاملة اطلب ملف الأرشيف `contract-instructions-2025-offline.zip`** من مُعِدّ الدليل.
+ويعمل **بلا إنترنت** بعد أول فتحة: الصفحة والبحث يُحفظان تلقائياً، وصور
+الصفحات تُحفظ بزرّ «احفظ الصفحات للعمل بلا إنترنت» في أسفل الصفحة — بضغطك
+لا تلقائياً، لأنها 33 ميغابايت من بيانات هاتفك.
 
 ## طريقة الاستخدام
 
@@ -81,6 +82,7 @@ node build.js       بناء الصفحة
 **Iraqi Public Contract Execution Instructions No. (1) of 2025 — offline interactive reference.**
 Single-file HTML, no server, no dependencies. 1202 clauses across 42 articles and 20 annexes,
 each transcribed verbatim and linked to a scan of its printed page.
-This repository excludes the 174 page images; request the full zip for the complete copy.
+Also published as an installable offline web app:
+https://usama-kh75.github.io/contract-instructions-2025-offline/
 
 </div>

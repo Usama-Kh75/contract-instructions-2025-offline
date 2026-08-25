@@ -1,4 +1,4 @@
-pages/
+# pages/ تُنشر الآن مع نسخة الويب على GitHub Pages
 *.pdf
 *.bak
 src/.built-hash
