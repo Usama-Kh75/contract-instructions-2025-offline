@@ -1577,7 +1577,7 @@
         <span class="release-stamp" id="releaseStamp"></span>
         <span class="fingerprint" id="fingerprint"></span>
         <span class="offline-box" id="offlineBox" hidden>
-          <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ الصفحات للعمل بلا إنترنت (33 م.ب)</button>
+          <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ الصفحات للعمل بلا إنترنت (31 م.ب)</button>
           <span class="offline-status" id="offlineStatus"></span>
         </span>
       </div>
@@ -2147,9 +2147,14 @@
       if (!('caches' in window)) { status.textContent = 'متصفحك لا يدعم الحفظ للعمل بلا إنترنت.'; return; }
       btn.disabled = true;
       const cache = await caches.open('pages-v1');
-      const total = 174;
+      // The list comes from the clauses themselves, so it can never drift
+      // from what the app is able to show. A hand-written range asked for
+      // six pages that do not exist and reported them to the reader as
+      // connection failures.
+      const pages = [...new Set(data.clauses.map(c => c.pdfPage))].sort((a, b) => a - b);
+      const total = pages.length;
       let done = 0, failed = 0;
-      for (let p = 7; p <= 180 && p - 6 <= total; p++) {
+      for (const p of pages) {
         const url = './pages/page-' + p + '.jpg';
         try {
           if (!(await cache.match(url))) {
@@ -2558,6 +2563,15 @@
       const pdf = node('a', 'full-pdf', '📑 فتح ملف التعليمات الكامل (PDF)');
       pdf.href = 'تعليمات تنفيذ العقود 2025.pdf';
       pdf.target = '_blank';
+      // the PDF ships with the archive but is not published on the web, so
+      // over http(s) the link would be dead - a button that does nothing is
+      // worse than no button
+      if (isWebCopy) {
+        pdf.hidden = true;
+        fetch(pdf.href, { method: 'HEAD' })
+          .then(res => { if (res.ok) pdf.hidden = false; })
+          .catch(() => { });
+      }
 
       panel.append(head, ref, quote, explain, doc, pdf);
     }
