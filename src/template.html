@@ -1,0 +1,2282 @@
+<!--
+  إعداد وتطوير: م. أسامة خليل هاشم — 2025
+  جميع الحقوق محفوظة. يُمنع نسب هذا العمل لغير معدّه.
+  هذه النسخة تحمل بصمة محتوى ذاتية التحقق (انظر data.integrity والراية التحذيرية عند اختلافها).
+-->
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f4c42">
+  <link rel="apple-touch-icon" href="ministry-logo.jpg">
+  <link rel="icon" href="ministry-logo.jpg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="تعليمات العقود 2025">
+  <link rel="manifest" href="manifest.json">
+  <meta name="author" content="م. أسامة خليل هاشم">
+  <meta name="copyright" content="© 2025 م. أسامة خليل هاشم - جميع الحقوق محفوظة">
+  <title>دليل تعليمات العقود 2025 - نسخة تفاعلية حديثة - إعداد م. أسامة خليل هاشم</title>
+
+  <!-- Google Font: Tajawal & Cairo with graceful fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #0f4c42;
+      --primary-light: #166457;
+      --primary-hover: #0a3830;
+      --primary-glow: rgba(15, 76, 66, 0.25);
+      --accent-gold: #c28830;
+      --accent-gold-hover: #aa7322;
+      --gold-bg: #fdf6ea;
+      --gold-border: #f2dcaf;
+      --gold-text: #825310;
+      
+      --bg-body: #f5f7f6;
+      --card-bg: #ffffff;
+      --card-border: #e2e8e5;
+      --card-hover-border: #8ec2b6;
+      
+      --text-main: #14211f;
+      --text-muted: #596e6a;
+      --text-subtle: #829490;
+      
+      --mint: #eaf5f2;
+      --mint-border: #b8e0d4;
+      --mint-text: #175e51;
+      
+      --input-bg: #ffffff;
+      --input-border: #cad7d3;
+      
+      --shadow-sm: 0 2px 8px rgba(15, 76, 66, 0.05);
+      --shadow-md: 0 10px 25px -4px rgba(15, 76, 66, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 20px 40px -10px rgba(15, 76, 66, 0.16);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 26px;
+    }
+
+    [data-theme="dark"] {
+      --primary: #1d7265;
+      --primary-light: #268c7c;
+      --primary-hover: #155a4f;
+      --primary-glow: rgba(29, 114, 101, 0.4);
+      --accent-gold: #e2a548;
+      --accent-gold-hover: #f3b960;
+      --gold-bg: #281f13;
+      --gold-border: #574122;
+      --gold-text: #f0c37b;
+      
+      --bg-body: #0d1514;
+      --card-bg: #142220;
+      --card-border: #233935;
+      --card-hover-border: #3d6860;
+      
+      --text-main: #f0f7f5;
+      --text-muted: #95aaa5;
+      --text-subtle: #6c827d;
+      
+      --mint: #1a2f2b;
+      --mint-border: #284a43;
+      --mint-text: #7ae0ce;
+      
+      --input-bg: #101c1a;
+      --input-border: #27403b;
+      
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      line-height: 1.6;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-body);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--input-border);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary-light);
+    }
+
+    /* Top Navigation Bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .topbar-content {
+      width: min(1200px, calc(100% - 32px));
+      min-height: 64px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 8px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--card-border);
+      flex-shrink: 0;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.2px;
+    }
+
+    .brand-text span {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+    }
+
+    .topbar-end {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .credit-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 50px;
+      background: var(--mint);
+      border: 1px solid var(--mint-border);
+      color: var(--mint-text);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    /* The owning organisation sits with the preparer, not with the ministry:
+       the right of the bar is the source authority, the left is who made this
+       copy and for whom. A quieter treatment than the ministry mark keeps the
+       title dominant. */
+    .org-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 12px 4px 6px;
+      border-radius: 50px;
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* The mark is a 1.6:1 landscape logo on a near-white plate, not a square
+       transparent glyph: no circular crop (it would cut the arcs), and it keeps
+       its own light plate so it does not read as a stray white block in dark
+       mode. Its Arabic wordmark is unreadable at this size, which is why the
+       name still sits beside it. */
+    .org-mark {
+      height: 26px;
+      width: auto;
+      object-fit: contain;
+      background: #f8f8f8;
+      border-radius: 5px;
+      padding: 1px 3px;
+      flex-shrink: 0;
+    }
+
+    .org-mark.is-missing {
+      display: none;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 15px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-action:hover {
+      background: var(--mint);
+      border-color: var(--mint-border);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .theme-btn {
+      padding: 8px 12px;
+      font-size: 1rem;
+    }
+
+    /* Hero & Search Section */
+    .hero {
+      background: linear-gradient(135deg, #092c26 0%, #11423a 60%, #17544a 100%);
+      color: #ffffff;
+      padding: 24px 16px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      right: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(194, 136, 48, 0.2) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-container {
+      width: min(1200px, calc(100% - 32px));
+      margin: auto;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: center;
+      gap: 36px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-text h1 {
+      font-size: clamp(1.25rem, 2.1vw, 1.75rem);
+      font-weight: 900;
+      line-height: 1.4;
+      margin-bottom: 10px;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .proof-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .proof-badges span {
+      padding: 5px 12px;
+      border-radius: 50px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #e0f2ee;
+      font-size: 0.74rem;
+      font-weight: 700;
+      backdrop-filter: blur(8px);
+    }
+
+    /* Search Box */
+    .search-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      box-shadow: var(--shadow-lg);
+      transition: all 0.3s ease;
+    }
+
+    .search-card label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .search-input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--input-bg);
+      border: 2px solid var(--input-border);
+      border-radius: var(--radius-md);
+      padding: 6px 8px 6px 14px;
+      transition: all 0.2s ease;
+    }
+
+    .search-input-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-glow);
+    }
+
+    .search-icon {
+      font-size: 1.2rem;
+      color: var(--text-subtle);
+      margin-left: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 6px 0;
+      min-width: 0;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-subtle);
+      font-weight: 500;
+    }
+
+    .btn-clear {
+      background: none;
+      border: none;
+      color: var(--text-subtle);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 50%;
+      display: none;
+      transition: color 0.15s ease;
+    }
+
+    .btn-clear:hover {
+      color: var(--text-main);
+    }
+
+    .btn-submit {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 22px;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-submit:hover {
+      background: var(--primary-light);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .main-container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 32px auto 60px;
+      flex: 1;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--card-border);
+    }
+
+    .kicker {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .section-head h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    /* Chapter Focus View */
+    .chapter-focus {
+      display: grid;
+      grid-template-columns: 260px 1fr 1fr;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .chapter-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 14px;
+      border-left: 1px solid var(--card-border);
+      background: var(--bg-body);
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .nav-group-title {
+      margin: 10px 4px 4px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--card-border);
+      color: var(--gold-dark, #8b7046);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
+    .nav-group-title:first-child { margin-top: 0; }
+
+    .chapter-btn {
+      width: 100%;
+      text-align: right;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .chapter-btn .num {
+      flex-shrink: 0;
+      min-width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-main);
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+
+    .chapter-btn:hover {
+      background: var(--card-bg);
+      color: var(--primary);
+      border-color: var(--card-border);
+    }
+
+    .chapter-btn.active {
+      background: var(--card-bg);
+      color: var(--primary);
+      border-color: var(--mint-border);
+      box-shadow: var(--shadow-sm);
+      border-right: 4px solid var(--primary);
+    }
+
+    .chapter-btn.active .num {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .chapter-info {
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-left: 1px solid var(--card-border);
+    }
+
+    .chapter-info h3 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin: 10px 0 16px;
+      line-height: 1.35;
+    }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .pill {
+      padding: 6px 12px;
+      border-radius: 50px;
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-border);
+      color: var(--gold-text);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 14px;
+    }
+
+    .pagebtn {
+      padding: 9px 18px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      background: var(--card-bg);
+      color: var(--text-main);
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 0.86rem;
+      transition: all 0.15s ease;
+    }
+
+    .pagebtn:hover:not(:disabled) {
+      background: var(--mint);
+      border-color: var(--mint-border);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .pagebtn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .pagecount {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 800;
+    }
+
+    .linkbtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: 1px solid var(--mint-border);
+      border-radius: var(--radius-sm);
+      background: var(--mint);
+      color: var(--mint-text);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .linkbtn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .chapter-image-pane {
+      position: relative;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      max-height: 600px;
+      cursor: zoom-in;
+    }
+
+    .chapter-image-pane img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .chapter-image-pane:hover img {
+      transform: scale(1.02);
+    }
+
+    .image-zoom-overlay {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Search Results Workspace */
+    .workspace {
+      display: none;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      align-items: start;
+      gap: 28px;
+    }
+
+    .workspace.visible {
+      display: grid;
+    }
+
+    .result-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .count {
+      padding: 6px 14px;
+      border-radius: 50px;
+      color: var(--mint-text);
+      background: var(--mint);
+      border: 1px solid var(--mint-border);
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+
+    .result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .result-card {
+      width: 100%;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: start;
+      gap: 16px;
+      text-align: right;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      background: var(--card-bg);
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .result-card:hover {
+      border-color: var(--card-hover-border);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .result-card.selected {
+      border-color: var(--primary);
+      background: var(--card-bg);
+      box-shadow: inset -5px 0 0 var(--primary), var(--shadow-md);
+    }
+
+    .idx {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      color: var(--gold-text);
+      background: var(--gold-bg);
+      border: 1px solid var(--gold-border);
+      font-weight: 900;
+      font-size: 0.9rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .meta span {
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      background: var(--bg-body);
+      border: 1px solid var(--card-border);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .result-card h3 {
+      margin: 4px 0 6px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .result-card p {
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .check {
+      color: transparent;
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+
+    .selected .check {
+      color: var(--primary);
+    }
+
+    .empty {
+      padding: 50px 20px;
+      text-align: center;
+      border: 2px dashed var(--card-border);
+      border-radius: var(--radius-lg);
+      background: var(--card-bg);
+    }
+
+    .empty h3 {
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .empty p {
+      color: var(--text-muted);
+    }
+
+    /* Selected Source & Official Reference Panel */
+    .source {
+      position: sticky;
+      top: 84px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      padding: 24px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      background: var(--card-bg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .source-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .source-head h2 {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--text-main);
+      margin-top: 4px;
+    }
+
+    .marker {
+      min-width: 70px;
+      padding: 6px 10px;
+      border: 1px solid var(--gold-border);
+      border-radius: 10px;
+      text-align: center;
+      color: var(--gold-text);
+      background: var(--gold-bg);
+    }
+
+    .marker small {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .marker strong {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .reference {
+      margin-top: 16px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      background: var(--bg-body);
+    }
+
+    .reference div small {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .reference div strong {
+      display: block;
+      color: var(--text-main);
+      font-size: 0.88rem;
+      font-weight: 900;
+      margin-top: 2px;
+    }
+
+    .quote, .explain {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+    }
+
+    .quote {
+      border-right: 4px solid var(--accent-gold);
+      background: var(--gold-bg);
+      border-top: 1px solid var(--gold-border);
+      border-left: 1px solid var(--gold-border);
+      border-bottom: 1px solid var(--gold-border);
+    }
+
+    .quote.summary {
+      border-right-color: var(--card-border);
+      background: transparent;
+    }
+
+    .quote.summary .quote-header strong {
+      color: var(--text-subtle);
+    }
+
+    .summary-note {
+      margin: 8px 0 0;
+      font-size: 0.74rem;
+      line-height: 1.6;
+      color: var(--text-subtle);
+      font-weight: 700;
+    }
+
+    .quote-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .quote-header strong {
+      color: var(--gold-text);
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+
+    .btn-copy {
+      background: var(--card-bg);
+      border: 1px solid var(--gold-border);
+      color: var(--gold-text);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-copy:hover {
+      background: var(--accent-gold);
+      color: #ffffff;
+    }
+
+    .quote blockquote {
+      margin: 0;
+      font-family: 'Cairo', 'Traditional Arabic', Tahoma, sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.9;
+      color: var(--text-main);
+    }
+
+    .explain {
+      border: 1px solid var(--mint-border);
+      background: var(--mint);
+    }
+
+    .explain strong {
+      color: var(--mint-text);
+      font-size: 0.82rem;
+      font-weight: 900;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .explain p {
+      margin: 0;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      line-height: 1.8;
+    }
+
+    .doc {
+      margin-top: 16px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      background: #111;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .toolbar {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .toolbar span {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+
+    .toolbar a {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 900;
+      transition: color 0.15s ease;
+    }
+
+    .toolbar a:hover {
+      color: var(--accent-gold);
+    }
+
+    .doc-img-wrapper {
+      cursor: zoom-in;
+      display: block;
+      overflow: hidden;
+      max-height: 380px;
+    }
+
+    .doc img {
+      width: 100%;
+      display: block;
+      transition: transform 0.25s ease;
+    }
+
+    .doc-img-wrapper:hover img {
+      transform: scale(1.02);
+    }
+
+    .kicker.kicker-summary {
+      color: var(--text-subtle);
+    }
+
+    .fingerprint-bad {
+      color: #b3261e;
+      font-weight: 800;
+    }
+
+    .miss-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1px dashed var(--card-border);
+      border-radius: var(--radius-md);
+      text-align: right;
+    }
+
+    .miss-box p {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      color: var(--text-subtle);
+    }
+
+    .miss-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-quiet {
+      background: transparent;
+      opacity: 0.75;
+    }
+
+    .img-missing {
+      background: var(--card-bg);
+      color: var(--text-main);
+      padding: 18px 16px;
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .img-missing strong {
+      display: block;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .img-missing p {
+      margin: 4px 0;
+      font-size: 0.75rem;
+      color: var(--text-subtle);
+      word-break: break-all;
+    }
+
+    .full-pdf {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--mint-border);
+      border-radius: var(--radius-md);
+      color: var(--primary);
+      background: var(--mint);
+      text-decoration: none;
+      font-weight: 900;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .full-pdf:hover {
+      background: var(--primary);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .lightbox-modal.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .lightbox-header {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+      z-index: 10;
+    }
+
+    .lightbox-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lightbox-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 800;
+      transition: all 0.15s ease;
+    }
+
+    .lightbox-btn:hover {
+      background: var(--primary-light);
+      border-color: #fff;
+    }
+
+    .lightbox-body {
+      max-width: 90vw;
+      max-height: 85vh;
+      overflow: auto;
+      display: flex;
+      /* margin:auto on the stage centres it while it fits and still lets the
+         container scroll to every edge once it is larger — align/justify-center
+         would pin the overflow out of reach */
+      padding: 10px;
+    }
+
+    /* The stage carries the layout box. When the image is turned a quarter
+       turn its rotated bounding box is its own height by its own width, and
+       only a real layout box that size lets the container scroll to the
+       edges — a rotated image on its own still occupies its unrotated box. */
+    .lightbox-stage {
+      margin: auto;
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .lightbox-img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--primary);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 2000;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--card-bg);
+      border-top: 1px solid var(--card-border);
+      padding: 24px 0 30px;
+      margin-top: auto;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .footer-content {
+      width: min(1200px, calc(100% - 32px));
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .footer-content strong {
+      color: var(--text-main);
+    }
+
+    .footer-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+
+    .release-stamp {
+      color: var(--text-subtle);
+      font-size: 0.72rem;
+    }
+
+    .fingerprint {
+      color: var(--text-subtle);
+      font-size: 0.72rem;
+      font-family: monospace;
+    }
+
+    .tamper-banner {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+      background: #b91c1c;
+      font-weight: 800;
+      font-size: 0.85rem;
+      text-align: center;
+      justify-content: center;
+    }
+
+    /* Responsive Queries */
+    @media (max-width: 980px) {
+      .hero-container {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+      .chapter-focus {
+        grid-template-columns: 1fr;
+      }
+      .chapter-list {
+        border-left: none;
+        border-bottom: 1px solid var(--card-border);
+        max-height: 250px;
+      }
+      .chapter-info {
+        border-left: none;
+        border-bottom: 1px solid var(--card-border);
+      }
+      .workspace.visible {
+        grid-template-columns: 1fr;
+      }
+      .source {
+        position: static;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar-content {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .topbar-end {
+        justify-content: space-between;
+      }
+      .search-card {
+        padding: 16px;
+      }
+      .search-input-wrapper {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .btn-submit {
+        width: 100%;
+        justify-content: center;
+      }
+      .result-card {
+        grid-template-columns: auto 1fr;
+      }
+      .check {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-content">
+      <div class="brand">
+        <img class="brand-mark" src="ministry-logo.jpg" alt="شعار وزارة التخطيط">
+        <div class="brand-text">
+          <strong>تعليمات تنفيذ العقود الحكومية لعام 2025</strong>
+          <span>المرجع التفاعلي المعتمد (رقم 1 لسنة 2025)</span>
+        </div>
+      </div>
+      <div class="topbar-end">
+        <span class="org-badge" id="orgBadge">
+          <img class="org-mark" id="orgLogo" src="basra-oil-logo.jpg" alt="">
+          <span>شركة نفط البصرة</span>
+        </span>
+        <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
+        <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>
+        <button class="btn-action" id="indexButton" type="button">↩ الفهرس العام</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-container">
+      <div class="hero-text">
+        <h1>اسأل عن أي مادة أو ضابطة، واذهب مباشرةً إلى سندها الرسمي الموثق.</h1>
+        <p style="color: #c9ded9; font-size: 0.84rem; line-height: 1.6;">محرك بحث قانوني ذكي ومفهرس بدقة لخدمة اللجان القانونية ولجان فتح وتحليل العطاءات والدوائر الحكومية.</p>
+        <div class="proof-badges">
+          <span>📜 النص الرسمي المعتمد</span>
+          <span>⚖️ المواد والبنود والضوابط</span>
+          <span>🔍 صورة الصفحة الأصلية</span>
+        </div>
+      </div>
+
+      <form class="search-card" id="searchForm">
+        <label for="searchInput">اكتب استفسارك أو المصطلح القانوني:</label>
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="searchInput" autocomplete="off" placeholder="مثال: سحب العمل، لجان التحليل، التأمينات..." />
+          <button class="btn-clear" id="clearSearch" type="button" title="مسح">✕</button>
+          <button class="btn-submit" type="submit">بحث فوري</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Chapters Interactive Viewer -->
+    <section class="chapters" id="chapters">
+      <div class="section-head">
+        <div>
+          <span class="kicker">الفهرس التفاعلي الشامل</span>
+          <h2>تصفح التعليمات (20 فصلاً) والضوابط الملحقة (20 ضابطة)</h2>
+        </div>
+      </div>
+
+      <article class="chapter-focus">
+        <nav class="chapter-list" id="chapterList"></nav>
+
+        <div class="chapter-info">
+          <div>
+            <span class="kicker" id="chapterNumber"></span>
+            <h3 id="chapterTitle"></h3>
+            <div class="pills">
+              <span class="pill" id="chapterPrinted"></span>
+              <span class="pill" id="chapterPdf"></span>
+            </div>
+          </div>
+
+          <div>
+            <div class="pager">
+              <button class="pagebtn" id="prevPage" type="button">‹ الصفحة السابقة</button>
+              <span class="pagecount" id="pageCount"></span>
+              <button class="pagebtn" id="nextPage" type="button">الصفحة التالية ›</button>
+            </div>
+            <button class="linkbtn" id="chapterOpenModal" type="button">🔍 تكبير الصفحة وقراءتها</button>
+          </div>
+        </div>
+
+        <div class="chapter-image-pane" id="chapterImagePane">
+          <img id="chapterImage" alt="صورة الفصل">
+          <div class="image-zoom-overlay">🔍 انقر للتكبير</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Search Results Workspace -->
+    <section class="workspace" id="workspace" aria-live="polite">
+      <div>
+        <div class="result-summary">
+          <div>
+            <span class="kicker">نتائج البحث القانوني</span>
+            <h2 id="queryTitle"></h2>
+          </div>
+          <span class="count" id="resultCount"></span>
+        </div>
+        <div class="result-list" id="resultList"></div>
+      </div>
+
+      <aside class="source" id="sourcePanel"></aside>
+    </section>
+
+  </main>
+
+  <!-- Lightbox Modal for Zooming Scanned Pages -->
+  <div class="lightbox-modal" id="lightboxModal">
+    <div class="lightbox-header">
+      <span id="lightboxTitle" style="font-weight: 800; font-size: 1rem;"></span>
+      <div class="lightbox-controls">
+        <button class="lightbox-btn" id="zoomInBtn" type="button">➕ تكبير</button>
+        <button class="lightbox-btn" id="zoomOutBtn" type="button">➖ تصغير</button>
+        <button class="lightbox-btn" id="rotateBtn" type="button" title="تدوير ربع دورة — يُحفظ للصفحة">⟳ تدوير</button>
+        <button class="lightbox-btn" id="zoomResetBtn" type="button">🔄 إعادة ضبط</button>
+        <button class="lightbox-btn" id="lightboxCloseBtn" type="button">✕ إغلاق</button>
+      </div>
+    </div>
+    <div class="lightbox-body" id="lightboxBody">
+      <div class="lightbox-stage" id="lightboxStage">
+        <img class="lightbox-img" id="lightboxImg" alt="صورة الصفحة المكبرة">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification for Copying -->
+  <div class="toast" id="toastNotification">📋 تم نسخ السند القانوني بنجاح!</div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div>
+        <strong>دليل تعليمات تنفيذ العقود العامة لسنة 2025 (رقم 1)</strong>
+        <p>© 2025 م. أسامة خليل هاشم — جميع الحقوق محفوظة وموثقة رقمياً</p>
+      </div>
+      <div class="footer-meta">
+        <span class="release-stamp" id="releaseStamp"></span>
+        <span class="fingerprint" id="fingerprint"></span>
+      </div>
+    </div>
+  </footer>
+
+  <script id="appData" type="application/json">@@APPDATA@@</script>
+
+  <script>
+    // --- Data & Integrity Handling ---
+    function fatalDataError(msg) {
+      const b = document.createElement('div');
+      b.className = 'tamper-banner';
+      b.textContent = '⚠ ' + msg + ' — يُرجى الحصول على نسخة سليمة من مصدرها المعتمد.';
+      document.body.prepend(b);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(document.getElementById('appData').textContent);
+    } catch (err) {
+      fatalDataError('تعذّرت قراءة بيانات التعليمات؛ الملف تالف أو عُدِّل بصورة أفسدت بنيته');
+      throw err;
+    }
+    if (!data || !Array.isArray(data.clauses) || !Array.isArray(data.chapters) || !data.chapters.length) {
+      fatalDataError('بيانات التعليمات ناقصة أو غير مكتملة');
+      throw new Error('appData missing required arrays');
+    }
+
+    let results = [], selectedId = null, selectedChapter = 1, chapterPage = 0, selectedKind = 'chapter';
+    let currentZoom = 1;
+
+    // FNV-1a Hash Verification
+    const fnv1a = s => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+      return (h >>> 0).toString(16).padStart(8, '0');
+    };
+
+    const contentHash = fnv1a(JSON.stringify({ clauses: data.clauses, chapters: data.chapters, annexes: data.annexes, credit: data.credit }));
+    if (typeof data.integrity !== 'string' || !/^[0-9a-f]{8}$/.test(data.integrity)) {
+      const b = document.createElement('div');
+      b.className = 'tamper-banner';
+      b.textContent = '⚠ تنبيه: هذه النسخة لا تحمل بصمة تحقق صالحة، فلا يمكن تأكيد مطابقتها للنسخة الرسمية.';
+      document.body.prepend(b);
+    } else if (data.integrity !== contentHash) {
+      const b = document.createElement('div');
+      b.className = 'tamper-banner';
+      b.textContent = '⚠ تنبيه: محتوى هذه النسخة لا يطابق بصمتها الأصلية، وقد يكون قد عُدِّل عن نسخته الرسمية.';
+      document.body.prepend(b);
+    }
+
+    if (data.credit) {
+      let ct = document.getElementById('creditText');
+      if (ct) ct.textContent = data.credit;
+    }
+
+    // The organisation mark is optional: if the file is not beside the HTML the
+    // name still shows, rather than a broken-image icon next to it.
+    const orgLogo = document.getElementById('orgLogo');
+    if (orgLogo) {
+      orgLogo.addEventListener('error', () => orgLogo.classList.add('is-missing'), { once: true });
+      if (orgLogo.complete && !orgLogo.naturalWidth) orgLogo.classList.add('is-missing');
+    }
+    // The computed hash is only "approved" when it matches the one shipped with
+    // the data. On a mismatch, showing the recomputed hash under that label would
+    // let a modified copy present its own fingerprint as proof of authenticity.
+    const fpEl = document.getElementById('fingerprint');
+    const fpValid = typeof data.integrity === 'string' && /^[0-9a-f]{8}$/.test(data.integrity);
+    if (fpValid && data.integrity === contentHash) {
+      fpEl.textContent = 'البصمة الرقمية المعتمدة: ' + contentHash;
+    } else if (fpValid) {
+      fpEl.classList.add('fingerprint-bad');
+      fpEl.textContent = 'البصمة المعتمدة: ' + data.integrity + ' — البصمة المحسوبة: ' + contentHash + ' (غير متطابقتين)';
+    } else {
+      fpEl.classList.add('fingerprint-bad');
+      fpEl.textContent = 'البصمة المحسوبة: ' + contentHash + ' — لا توجد بصمة معتمدة للمقارنة';
+    }
+
+    const stampEl = document.getElementById('releaseStamp');
+    if (stampEl) {
+      const ver = typeof data.version === 'string' ? data.version : '';
+      const rel = typeof data.releaseDate === 'string' ? data.releaseDate : '';
+      const parts = [];
+      if (ver) parts.push('إصدار الدليل ' + ver);
+      if (rel) parts.push('بتاريخ ' + rel);
+      stampEl.textContent = parts.join(' — ');
+    }
+
+    // --- Dark Mode / Light Mode Theme Toggle ---
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const themeStore = {
+      get() { try { return localStorage.getItem('contracts_app_theme'); } catch (e) { return null; } },
+      set(v) { try { localStorage.setItem('contracts_app_theme', v); } catch (e) { /* التخزين غير متاح — يبقى الوضع لهذه الجلسة فقط */ } }
+    };
+    const savedTheme = themeStore.get() || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    themeToggleBtn.addEventListener('click', () => {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      themeStore.set(next);
+      updateThemeIcon(next);
+    });
+
+    function updateThemeIcon(t) {
+      themeToggleBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+      themeToggleBtn.title = t === 'dark' ? 'التحويل إلى الوضع النهاري' : 'التحويل إلى الوضع الليلي';
+    }
+
+    // --- Failed Searches ---
+    // A search that returns nothing is the highest-signal thing this reference
+    // can learn: it means the reader's vocabulary and the ministry's diverged.
+    // Kept in this browser only — no network, no telemetry — because the copy
+    // lives on the reader's machine, not the author's. The reader exports it
+    // and sends it on if they choose to.
+    let lastQuery = '';
+    const missStore = {
+      key: 'contracts_app_misses',
+      read() { try { return JSON.parse(localStorage.getItem(this.key) || '[]'); } catch (e) { return []; } },
+      write(v) { try { localStorage.setItem(this.key, JSON.stringify(v.slice(-200))); } catch (e) { } },
+      add(text) {
+        const t = String(text || '').trim();
+        if (!t) return;
+        const list = this.read();
+        const hit = list.find(x => x.q === t);
+        if (hit) { hit.n++; hit.d = Date.now(); }
+        else list.push({ q: t, n: 1, d: Date.now() });
+        this.write(list);
+      },
+      clear() { try { localStorage.removeItem(this.key); } catch (e) { } },
+      asText() {
+        const list = this.read().slice().sort((a, b) => b.n - a.n || b.d - a.d);
+        if (!list.length) return '';
+        const ver = (typeof data.version === 'string' ? data.version : '—');
+        const lines = list.map(x => {
+          const dt = new Date(x.d);
+          const day = isNaN(dt) ? '' : dt.toISOString().slice(0, 10);
+          return `${x.n}×  «${x.q}»${day ? '   — آخر مرة ' + day : ''}`;
+        });
+        return 'استعلامات لم تُرجع أي نتيجة — دليل تعليمات العقود 2025 (إصدار ' + ver + ')\n'
+             + 'عددها: ' + list.length + '\n\n' + lines.join('\n');
+      }
+    };
+
+    // --- Arabic Search Normalization & TF-IDF Ranking ---
+    const q = s => String(s ?? '').normalize('NFKD')
+      .replace(/[ً-ٰٟ]/g, '')
+      .replace(/ـ/g, '')
+      .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+      .replace(/[۰-۹]/g, d => d.charCodeAt(0) - 0x06F0)
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/[^\p{L}\p{N}%]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim().toLowerCase();
+
+    const idx = data.clauses.map(c => ({
+      c,
+      title: q(c.title),
+      official: q(c.officialText),
+      explain: q(c.explanation),
+      keywords: q((c.keywords || []).join(' ')),
+      meta: q([c.article, c.clause, c.category].join(' '))
+    }));
+
+    const df = {};
+    idx.forEach(x => {
+      new Set([x.title, x.official, x.explain, x.keywords, x.meta].join(' ').split(' ')).forEach(t => {
+        if (t) df[t] = (df[t] || 0) + 1;
+      });
+    });
+
+    const idf = t => Math.log(1 + idx.length / ((df[t] || 0) + 1));
+    const artNum = a => {
+      const s = String(a ?? '')
+        .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+        .replace(/[۰-۹]/g, d => d.charCodeAt(0) - 0x06F0);
+      const m = s.match(/\((\d+)\)/);
+      return m ? parseInt(m[1], 10) : 9999;
+    };
+
+    // --- Clause Sequence Ordering ---
+    // The printed source numbers its clauses with Arabic ordinal words, then
+    // digits, then letters in abjad order (ا ب ج د ه و ز ح ط ي ...), not the
+    // modern alphabet. Results must follow that sequence, not relevance.
+    const CLAUSE_ORD = {
+      'اولا': 1, 'ثانيا': 2, 'ثالثا': 3, 'رابعا': 4, 'خامسا': 5,
+      'سادسا': 6, 'سابعا': 7, 'ثامنا': 8, 'تاسعا': 9, 'عاشرا': 10,
+      'حادي عشر': 11, 'احد عشر': 11,
+      'ثاني عشر': 12, 'اثنا عشر': 12, 'اثني عشر': 12,
+      'ثالث عشر': 13, 'ثلاثه عشر': 13,
+      'رابع عشر': 14, 'اربعه عشر': 14,
+      'خامس عشر': 15, 'خمسه عشر': 15,
+      'سادس عشر': 16, 'سته عشر': 16,
+      'سابع عشر': 17, 'سبعه عشر': 17,
+      'ثامن عشر': 18, 'ثمانيه عشر': 18,
+      'تاسع عشر': 19, 'تسعه عشر': 19,
+      'عشرون': 20, 'عشرين': 20,
+      'واحد وعشرون': 21, 'اثنان وعشرون': 22, 'ثلاثه وعشرون': 23,
+      'اربعه وعشرون': 24, 'خمسه وعشرون': 25, 'سته وعشرون': 26,
+      'سبعه وعشرون': 27, 'ثمانيه وعشرون': 28, 'تسعه وعشرون': 29
+    };
+
+    const ABJAD = ['ا', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح', 'ط', 'ي',
+                   'ك', 'ل', 'م', 'ن', 'س', 'ع', 'ف', 'ص', 'ق', 'ر',
+                   'ش', 'ت', 'ث', 'خ', 'ذ', 'ض', 'ظ', 'غ'];
+
+    const normClause = s => String(s ?? '').normalize('NFKD')
+      .replace(/[ً-ٰٟ]/g, '')
+      .replace(/ـ/g, '')
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660)
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Annex 5's qualification tables are indexed cell by cell, so a cell label
+    // reads e.g. "ثانياً / جدول (1) / الخبرة التخصصية / عقود الاشغال الصغيرة".
+    // These segments need ranks too, or every cell ties and the reader gets the
+    // small/medium/large/huge thresholds in an arbitrary order.
+    // keys are written as normClause leaves them: NFKD splits ؤ into و plus a
+    // combining hamza, which the diacritic strip then removes, so رؤوس becomes رووس
+    const TABLE_CRITERION = { 'العنوان': 1, 'رووس الاعمده': 2, 'الكفاءه الماليه': 3, 'الحسابات الختاميه': 4, 'الخبره التخصصيه': 5 };
+    const TABLE_SIZE = { 'خانه المعيار': 1, 'الصغيره': 2, 'المتوسطه': 3, 'الكبيره': 4, 'الضخمه': 5 };
+
+    const segRank = p => {
+      if (!p) return 900;
+      if (p === 'الديباجه' || p === 'صدر الماده' || p === 'الماده كامله') return 0;
+      // annexes 6 and 8 number their own clauses as "المادة (N)"
+      const inner = p.match(/^الماده \((\d+)\)/);
+      if (inner) return 300 + parseInt(inner[1], 10);
+      const tbl = p.match(/^جدول \((\d+)\)/);
+      if (tbl) return 400 + parseInt(tbl[1], 10);
+      if (TABLE_CRITERION[p] !== undefined) return 500 + TABLE_CRITERION[p];
+      for (const k in TABLE_SIZE) if (p === k || p.endsWith(' ' + k)) return 600 + TABLE_SIZE[k];
+      if (CLAUSE_ORD[p] !== undefined) return CLAUSE_ORD[p];
+      const num = p.match(/^(\d+)/);
+      if (num) return 100 + parseInt(num[1], 10);
+      // annex 5 prints a bare hamza where the fourth letter should be (أ ب جـ ء)
+      if (p === 'ء') return 200 + ABJAD.indexOf('د');
+      const letter = ABJAD.indexOf(p.charAt(0));
+      if (letter >= 0 && p.length <= 2) return 200 + letter;
+      return 900;
+    };
+
+    const clauseKey = lbl => normClause(lbl).split('/').map(x => segRank(x.trim()));
+
+    const cmpClause = (a, b) => {
+      const ka = clauseKey(a), kb = clauseKey(b);
+      const len = Math.max(ka.length, kb.length);
+      for (let i = 0; i < len; i++) {
+        // a shorter path is the parent clause, so it comes first
+        const x = ka[i] === undefined ? -1 : ka[i];
+        const y = kb[i] === undefined ? -1 : kb[i];
+        if (x !== y) return x - y;
+      }
+      return 0;
+    };
+
+    // المواد before الضوابط when both carry the same number
+    const kindRank = a => /^ضوابط/.test(String(a ?? '')) ? 1 : 0;
+
+    function search(value) {
+      const nq = q(value);
+      if (!nq) return [];
+      const tokens = nq.split(' ').filter(t => t.length > 1 && !['هل', 'ما', 'من', 'في', 'عن', 'هي', 'على', 'إلى'].includes(t));
+
+      return idx.map(x => {
+        const { title, official, explain, keywords, meta } = x;
+        const all = title + ' ' + official + ' ' + explain + ' ' + keywords + ' ' + meta;
+        const phrase = all.includes(nq);
+        if (!phrase && !tokens.every(t => all.includes(t))) return { c: x.c, score: 0 };
+
+        let score = 0;
+        if (title.includes(nq)) score += 45;
+        if (keywords.includes(nq)) score += 35;
+        if (official.includes(nq)) score += 28;
+        if (explain.includes(nq)) score += 20;
+        if (meta.includes(nq)) score += 14;
+
+        for (const t of tokens) {
+          const w = idf(t);
+          if (title.includes(t)) score += 9 * w;
+          if (keywords.includes(t)) score += 7 * w;
+          if (official.includes(t)) score += 5 * w;
+          if (explain.includes(t)) score += 3 * w;
+          if (meta.includes(t)) score += 2 * w;
+        }
+        return { c: x.c, score };
+      }).filter(r => r.score > 0).sort((a, b) => {
+        // the whole main body precedes the annexes in the printed document,
+        // so kind comes before number - otherwise article 6 lands after annex 5
+        const ak = kindRank(a.c.article), bk = kindRank(b.c.article);
+        if (ak !== bk) return ak - bk;
+        const an = artNum(a.c.article), bn = artNum(b.c.article);
+        if (an !== bn) return an - bn;
+        const cc = cmpClause(a.c.clause, b.c.clause);
+        if (cc !== 0) return cc;
+        if (a.c.pdfPage !== b.c.pdfPage) return a.c.pdfPage - b.c.pdfPage;
+        return b.score - a.score;
+      }).map(r => r.c);
+    }
+
+    // --- DOM Helper Functions ---
+    function node(tag, cls, text) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text !== undefined) e.textContent = text;
+      return e;
+    }
+
+    function meta(items) {
+      const e = node('div', 'meta');
+      items.forEach(x => { if (x) e.append(node('span', '', x)); });
+      return e;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toastNotification');
+      t.textContent = msg || '📋 تم نسخ السند القانوني بنجاح!';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // --- Copy Reference Helper ---
+    function copyClauseText(c) {
+      const isVerbatim = c.verbatim === true;
+      const head = isVerbatim
+        ? 'سند قانوني: تعليمات تنفيذ العقود الحكومية رقم (1) لسنة 2025'
+        : 'نص مُلخَّص (غير حرفي) من تعليمات تنفيذ العقود الحكومية رقم (1) لسنة 2025';
+      const tail = isVerbatim
+        ? ''
+        : '\n\n[تنبيه: الصياغة أعلاه مختصرة للتيسير ولا تصلح للاستشهاد الرسمي. النص المعتمد في الصفحة المطبوعة المذكورة.]';
+      const textToCopy = `${head}\nالمصدر: ${c.article} - ${c.clause || ''}\nالموضوع: ${c.title}\nالصفحة: ${c.printedPage}\n\n«${c.officialText}»${tail}`;
+      copyPlainText(textToCopy, '📋 تم نسخ النص والسند القانوني إلى الحافظة!');
+    }
+
+    function copyPlainText(textToCopy, okMsg) {
+      if (!textToCopy) { showToast('لا يوجد ما يُنسخ'); return; }
+      const ok = () => showToast(okMsg || '📋 تم النسخ إلى الحافظة');
+      const fallback = () => {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = textToCopy;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const done = document.execCommand && document.execCommand('copy');
+          document.body.removeChild(ta);
+          done ? ok() : showToast('تعذر النسخ التلقائي — يمكنك تحديد النص ونسخه يدوياً');
+        } catch (e) {
+          showToast('تعذر النسخ التلقائي — يمكنك تحديد النص ونسخه يدوياً');
+        }
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).then(ok).catch(fallback);
+        } else {
+          fallback();
+        }
+      } catch (e) {
+        fallback();
+      }
+    }
+
+    // --- Lightbox Functions ---
+    const lightbox = document.getElementById('lightboxModal');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxTitle = document.getElementById('lightboxTitle');
+
+    const lightboxStage = document.getElementById('lightboxStage');
+    const lightboxBody = document.getElementById('lightboxBody');
+
+    // Zoom and rotation both change the stage's LAYOUT size, not just the
+    // image's transform. A CSS transform leaves the layout box unchanged, so
+    // the scroll container never grows and the edges — the right-hand margin
+    // first, in an RTL page — fall outside the scrollable area and get clipped.
+    let lightboxRotation = 0;
+    let lightboxSrc = '';
+
+    // Pages 88 and 91 of the source print their tables a quarter turn off, so
+    // a reader turns them on every visit. Remember the turn per page, on this
+    // device only — same as the failed-search log, no telemetry.
+    const rotStore = {
+      key: 'contracts_app_page_rotation',
+      read() { try { return JSON.parse(localStorage.getItem(this.key) || '{}'); } catch (e) { return {}; } },
+      get(src) {
+        const v = this.read()[src];
+        return typeof v === 'number' ? ((v % 360) + 360) % 360 : 0;
+      },
+      set(src, deg) {
+        try {
+          const m = this.read();
+          if (deg) m[src] = deg; else delete m[src];
+          localStorage.setItem(this.key, JSON.stringify(m));
+        } catch (e) { }
+      }
+    };
+
+    function applyView() {
+      const nw = lightboxImg.naturalWidth, nh = lightboxImg.naturalHeight;
+      if (!nw || !nh) return;
+      // measure the viewport, never the container: the modal is a centred
+      // column flex, so the body shrinks to fit its content — reading its
+      // width back here would feed the stage's own size into the scale
+      const availW = Math.max(120, window.innerWidth * 0.9 - 40);
+      const availH = Math.max(120, window.innerHeight * 0.80 - 40);
+      // a quarter turn swaps which of the image's own sides faces the viewport
+      const swap = lightboxRotation % 180 !== 0;
+      const scale = Math.min(availW / (swap ? nh : nw), availH / (swap ? nw : nh), 1) * currentZoom;
+      const w = Math.round(nw * scale), h = Math.round(nh * scale);
+      lightboxImg.style.width = w + 'px';
+      lightboxImg.style.height = h + 'px';
+      lightboxImg.style.transform = 'translate(-50%, -50%) rotate(' + lightboxRotation + 'deg)';
+      lightboxStage.style.width = (swap ? h : w) + 'px';
+      lightboxStage.style.height = (swap ? w : h) + 'px';
+    }
+
+    function openLightbox(src, title) {
+      lightboxTitle.textContent = title || 'معاينة الصفحة الرسمية';
+      currentZoom = 1;
+      lightboxSrc = src;
+      lightboxRotation = rotStore.get(src);
+      lightboxImg.style.width = '';
+      lightboxImg.style.height = '';
+      lightboxStage.style.width = '';
+      lightboxStage.style.height = '';
+      lightboxImg.src = src;
+      lightbox.classList.add('active');
+      // a cached image is already complete and fires no load event; an
+      // uncached one is laid out by the standing load listener below
+      if (lightboxImg.complete && lightboxImg.naturalWidth) applyView();
+    }
+
+    // one standing listener rather than a per-opening one: an image that never
+    // loads would otherwise leave its handler pending until some later image
+    // loaded and fired the whole accumulated pile
+    lightboxImg.addEventListener('load', applyView);
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+    }
+
+    document.getElementById('lightboxCloseBtn').addEventListener('click', closeLightbox);
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+      currentZoom = Math.min(currentZoom + 0.25, 4);
+      applyView();
+    });
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+      currentZoom = Math.max(currentZoom - 0.25, 1);
+      applyView();
+    });
+    document.getElementById('rotateBtn').addEventListener('click', () => {
+      lightboxRotation = (lightboxRotation + 90) % 360;
+      rotStore.set(lightboxSrc, lightboxRotation);
+      applyView();
+    });
+    document.getElementById('zoomResetBtn').addEventListener('click', () => {
+      currentZoom = 1;
+      lightboxRotation = 0;
+      rotStore.set(lightboxSrc, 0);
+      applyView();
+    });
+    window.addEventListener('resize', () => {
+      if (lightbox.classList.contains('active')) applyView();
+    });
+    lightbox.addEventListener('click', e => {
+      if (e.target === lightbox || e.target === lightboxBody || e.target === lightboxStage) closeLightbox();
+    });
+    window.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLightbox();
+      // 'r' and 'ق' are the same physical key on the two layouts in use here
+      if (lightbox.classList.contains('active') && (e.key === 'r' || e.key === 'R' || e.key === 'ق')) {
+        document.getElementById('rotateBtn').click();
+      }
+    });
+
+    // --- Render Search Results ---
+    function renderResults() {
+      const list = document.getElementById('resultList');
+      list.replaceChildren();
+      document.getElementById('resultCount').textContent = results.length + ' نتيجة مطابقة';
+
+      if (!results.length) {
+        missStore.add(lastQuery);
+        const e = node('div', 'empty');
+        e.append(
+          node('h3', '', 'لم يتم العثور على مادة مطابقة'),
+          node('p', '', 'جرّب كتابة مصطلح قانوني أقصر أو استخدام كلمات البحث السريعة أعلى الصفحة.')
+        );
+
+        const misses = missStore.read();
+        if (misses.length) {
+          const box = node('div', 'miss-box');
+          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + misses.length + ' استعلاماً لم يُرجع نتيجة. إرسالها إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
+          const row = node('div', 'miss-actions');
+          const copyBtn = node('button', 'btn-copy', '📋 نسخ الاستعلامات غير الموفقة');
+          copyBtn.type = 'button';
+          copyBtn.addEventListener('click', () => copyPlainText(missStore.asText(), 'تم نسخ الاستعلامات — الصقها في رسالة إلى مُعِدّ الدليل'));
+          const clearBtn = node('button', 'btn-copy btn-quiet', '🗑 مسح السجل');
+          clearBtn.type = 'button';
+          clearBtn.addEventListener('click', () => { missStore.clear(); renderResults(); });
+          row.append(copyBtn, clearBtn);
+          box.append(row);
+          e.append(box);
+        }
+
+        list.append(e);
+        renderSource(null);
+        return;
+      }
+
+      results.forEach((c, i) => {
+        const b = node('button', 'result-card' + (c.id === selectedId ? ' selected' : ''));
+        b.type = 'button';
+        b.dataset.id = c.id;
+        b.append(node('span', 'idx', String(i + 1).padStart(2, '0')));
+        
+        const body = node('span', '');
+        body.append(
+          meta([c.article, c.clause, c.category]),
+          node('h3', '', c.title),
+          node('p', '', c.explanation)
+        );
+        b.append(body, node('span', 'check', '✓'));
+        b.addEventListener('click', () => selectResult(c.id));
+        list.append(b);
+      });
+
+      const selected = results.find(c => c.id === selectedId) || results[0];
+      renderSource(selected);
+    }
+
+    function selectResult(id) {
+      selectedId = id;
+      document.querySelectorAll('.result-card').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
+      const chosen = results.find(c => c.id === id);
+      renderSource(chosen);
+
+      setTimeout(() => {
+        const panel = document.getElementById('sourcePanel');
+        const page = document.getElementById('sourcePage');
+        if (matchMedia('(min-width: 981px)').matches) {
+          panel.scrollTo({ top: Math.max((page?.offsetTop || 0) - 16, 0), behavior: 'smooth' });
+        } else {
+          page?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 0);
+    }
+
+    function renderSource(c) {
+      const panel = document.getElementById('sourcePanel');
+      panel.replaceChildren();
+
+      if (!c) {
+        const emp = node('div', 'empty');
+        emp.append(node('h3', '', 'لا توجد نتيجة مختارة'), node('p', '', 'ابحث أولاً لعرض السند القانوني والصورة الأصلية.'));
+        panel.append(emp);
+        return;
+      }
+
+      const verbatim = c.verbatim === true;
+      const n = results.findIndex(x => x.id === c.id) + 1;
+      const head = node('div', 'source-head');
+      const titleDiv = node('div', '');
+      titleDiv.append(
+        node('span', 'kicker' + (verbatim ? '' : ' kicker-summary'),
+             verbatim ? 'السند القانوني الرسمي' : 'نص مُلخَّص — لا يصلح للاستشهاد'),
+        node('h2', '', c.title)
+      );
+      
+      const marker = node('div', 'marker');
+      marker.append(node('small', '', 'النتيجة'), node('strong', '', String(n).padStart(2, '0')));
+      head.append(titleDiv, marker);
+
+      const ref = node('div', 'reference');
+      [
+        ['المصدر / المادة', c.article],
+        ['البند / الفقرة', c.clause || '-'],
+        ['الصفحة المطبوعة', c.printedPage],
+        ['رقم صفحة الـ PDF', c.pdfPage]
+      ].forEach(([lbl, val]) => {
+        const d = node('div', '');
+        d.append(node('small', '', lbl), node('strong', '', String(val)));
+        ref.append(d);
+      });
+
+      // Quote with Copy Button
+      const quote = node('div', verbatim ? 'quote' : 'quote summary');
+      const quoteHead = node('div', 'quote-header');
+      quoteHead.append(node('strong', '', verbatim ? '📜 النص الحرفي للتعليمات' : '📄 نص مُلخَّص — غير حرفي'));
+
+      const copyBtn = node('button', 'btn-copy', verbatim ? '📋 نسخ السند' : '📋 نسخ النص');
+      copyBtn.type = 'button';
+      copyBtn.addEventListener('click', () => copyClauseText(c));
+      quoteHead.append(copyBtn);
+
+      const block = node('blockquote', '');
+      block.textContent = '«' + c.officialText + '»';
+      quote.append(quoteHead, block);
+      if (!verbatim) {
+        quote.append(node('p', 'summary-note', 'هذه صياغة مختصرة للتيسير، لا تصلح للاستشهاد الرسمي. راجع صورة الصفحة المطبوعة أدناه للنص المعتمد.'));
+      }
+
+      // Explanation
+      const explain = node('div', 'explain');
+      explain.append(node('strong', '', '💡 التفسير والإيضاح المبسط:'), node('p', '', c.explanation));
+
+      // Page Image Preview
+      const doc = node('div', 'doc');
+      doc.id = 'sourcePage';
+      const toolbar = node('div', 'toolbar');
+      toolbar.append(node('span', '', 'الصفحة المطبوعة رقم ' + c.printedPage));
+      
+      // one flag guards every route into the viewer, so a failed image
+      // cannot lead the reader into a lightbox showing the same broken file
+      let pageImageOk = true;
+      const zoomPage = () => {
+        if (!pageImageOk) return;
+        openLightbox('.' + c.pageImage, c.title + ' — صفحة ' + c.printedPage);
+      };
+
+      const openModalBtn = node('a', '', '🔍 تكبير وقراءة الصفحة');
+      openModalBtn.href = '#';
+      openModalBtn.addEventListener('click', e => {
+        e.preventDefault();
+        zoomPage();
+      });
+      toolbar.append(openModalBtn);
+
+      const imgWrapper = node('div', 'doc-img-wrapper');
+      imgWrapper.addEventListener('click', zoomPage);
+      const img = node('img', '');
+      img.src = '.' + c.pageImage;
+      img.alt = 'صورة الصفحة ' + c.printedPage;
+      img.addEventListener('error', () => {
+        pageImageOk = false;
+        openModalBtn.remove();
+        imgWrapper.replaceChildren();
+        imgWrapper.style.cursor = 'default';
+        const warn = node('div', 'img-missing');
+        warn.append(
+          node('strong', '', '⚠️ تعذّر عرض صورة الصفحة ' + c.printedPage),
+          node('p', '', 'الملف المطلوب: ' + c.pageImage.replace(/^\//, '')),
+          node('p', '', 'مجلد «pages» غير موجود بجانب ملف «تعليمات العقود.html». أبقِ الملف والمجلد في المجلد نفسه؛ ولا تنقل ملف HTML وحده.')
+        );
+        imgWrapper.append(warn);
+      });
+      imgWrapper.append(img);
+
+      doc.append(toolbar, imgWrapper);
+
+      const pdf = node('a', 'full-pdf', '📑 فتح ملف التعليمات الكامل (PDF)');
+      pdf.href = 'تعليمات تنفيذ العقود 2025.pdf';
+      pdf.target = '_blank';
+
+      panel.append(head, ref, quote, explain, doc, pdf);
+    }
+
+    // --- Render Chapter Viewer ---
+    function currentSection() {
+      const list = selectedKind === 'annex' ? (data.annexes || []) : data.chapters;
+      return list.find(x => x.number === selectedChapter) || list[0] || data.chapters[0];
+    }
+
+    function renderChapter() {
+      const c = currentSection();
+      const isAnnex = selectedKind === 'annex';
+      const label = isAnnex ? 'ضوابط رقم (' + c.number + ')' : 'الفصل ' + c.number;
+      const end = c.endPage || c.pdfPage;
+      if (chapterPage < c.pdfPage || chapterPage > end) chapterPage = c.pdfPage;
+
+      document.querySelectorAll('.chapter-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.number) === c.number && b.dataset.kind === selectedKind));
+      document.getElementById('chapterNumber').textContent = label;
+      document.getElementById('chapterTitle').textContent = c.title;
+
+      const offset = chapterPage - c.pdfPage;
+      document.getElementById('chapterPrinted').textContent = 'الصفحة المطبوعة ' + (Number(c.printedPage) + offset);
+      document.getElementById('chapterPdf').textContent = 'صفحة PDF ' + chapterPage;
+
+      const total = end - c.pdfPage + 1, pos = offset + 1;
+      const pager = document.querySelector('.pager');
+      pager.style.display = total > 1 ? 'flex' : 'none';
+      document.getElementById('pageCount').textContent = 'صفحة ' + pos + ' من ' + total;
+      document.getElementById('prevPage').disabled = chapterPage <= c.pdfPage;
+      document.getElementById('nextPage').disabled = chapterPage >= end;
+
+      const src = './pages/page-' + chapterPage + '.jpg';
+      const imgEl = document.getElementById('chapterImage');
+      imgEl.src = src;
+      imgEl.alt = label + ' - صفحة ' + pos;
+
+      const caption = label + ': ' + c.title + ' (صفحة ' + pos + ')';
+      document.getElementById('chapterOpenModal').onclick = () => openLightbox(src, caption);
+      document.getElementById('chapterImagePane').onclick = () => openLightbox(src, caption);
+    }
+
+    function stepPage(d) {
+      const c = currentSection();
+      const end = c.endPage || c.pdfPage;
+      const t = chapterPage + d;
+      if (t >= c.pdfPage && t <= end) {
+        chapterPage = t;
+        renderChapter();
+      }
+    }
+
+    document.getElementById('prevPage').addEventListener('click', () => stepPage(-1));
+    document.getElementById('nextPage').addEventListener('click', () => stepPage(1));
+
+    // Populate Navigation List (chapters + annexes)
+    const navList = document.getElementById('chapterList');
+    function addGroup(items, kind, heading) {
+      if (!items || !items.length) return;
+      navList.append(node('div', 'nav-group-title', heading));
+      items.forEach(c => {
+        const b = node('button', 'chapter-btn');
+        b.append(node('span', 'num', c.number), node('span', '', c.title));
+        b.type = 'button';
+        b.dataset.number = c.number;
+        b.dataset.kind = kind;
+        b.addEventListener('click', () => {
+          selectedKind = kind;
+          selectedChapter = c.number;
+          chapterPage = c.pdfPage;
+          renderChapter();
+        });
+        navList.append(b);
+      });
+    }
+    addGroup(data.chapters, 'chapter', 'فصول التعليمات (20)');
+    addGroup(data.annexes, 'annex', 'الضوابط الملحقة (20)');
+    renderChapter();
+
+    // --- Search & Navigation Actions ---
+    const indexBtn = document.getElementById('indexButton');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearch');
+
+    function showChapters() {
+      results = [];
+      selectedId = null;
+      document.getElementById('workspace').classList.remove('visible');
+      document.getElementById('chapters').style.display = 'block';
+      indexBtn.style.display = 'none';
+    }
+
+    function performSearch(val) {
+      const value = (val || '').trim();
+      if (!value) {
+        showChapters();
+        return;
+      }
+      searchInput.value = value;
+      lastQuery = value;
+      clearSearchBtn.style.display = 'block';
+      results = search(value);
+      selectedId = results[0]?.id || null;
+      document.getElementById('queryTitle').textContent = '«' + value + '»';
+      document.getElementById('chapters').style.display = 'none';
+      document.getElementById('workspace').classList.add('visible');
+      indexBtn.style.display = 'inline-flex';
+      renderResults();
+      document.getElementById('workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', e => {
+      e.preventDefault();
+      performSearch(searchInput.value);
+    });
+
+    searchInput.addEventListener('input', e => {
+      const val = e.target.value.trim();
+      clearSearchBtn.style.display = val ? 'block' : 'none';
+      if (!val) showChapters();
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearchBtn.style.display = 'none';
+      searchInput.focus();
+      showChapters();
+    });
+
+    indexBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      clearSearchBtn.style.display = 'none';
+      showChapters();
+      document.getElementById('chapters').scrollIntoView({ behavior: 'smooth' });
+    });
+    indexBtn.style.display = 'none';
+
+  </script>
+</body>
+</html>
