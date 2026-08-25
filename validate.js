@@ -140,6 +140,11 @@ for (const k of concepts) {
   else if (conceptIds.has(k.id)) fail(at + ': معرّف مفهوم مكرر «' + k.id + '»');
   else conceptIds.add(k.id);
   if (!k.label) fail(at + ': بلا عنوان');
+  // الجدول فهمُنا مُدوَّناً، وقد يكون فهمنا خاطئاً. ومساواةٌ بلا تعليل لا
+  // يمكن لأحد أن يراجعها — لا نحن بعد سنة، ولا من يخلفنا.
+  if (!k.note || !String(k.note).trim()) {
+    fail(at + ': بلا تعليل — اكتب في «note» لماذا هذه الألفاظ شيء واحد في هذا المستند');
+  }
   if (!Array.isArray(k.terms) || k.terms.length < 2) {
     fail(at + ': المفهوم يحتاج مصطلحين على الأقل، وإلا فلا شيء يربطه بشيء');
     continue;

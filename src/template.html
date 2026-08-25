@@ -1546,6 +1546,9 @@
     // whether the reader accepted the concept layer's offer for THIS query;
     // it resets on every new search, so the expansion is never sticky
     let conceptAdded = false;
+    // set only by the click, so a re-render for any other reason does not
+    // yank the reader back to the divider
+    let conceptJustAdded = false;
     // everything currently on screen, matches plus accepted extras - the list
     // selectResult must look in, or clicking an added clause finds nothing
     let shownResults = [];
@@ -2153,9 +2156,16 @@
 
       if (found) {
         if (conceptAdded) {
-          list.append(node('div', 'concept-divider',
-            'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')'));
+          const divider = node('div', 'concept-divider',
+            'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')');
+          list.append(divider);
           found.extras.forEach((x, i) => list.append(card(x.clause, results.length + i, x.via)));
+          // with a long result list the new block lands far below the fold,
+          // so accepting the offer would look like nothing happened
+          if (conceptJustAdded) {
+            conceptJustAdded = false;
+            divider.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         } else {
           const bar = node('div', 'concept-bar');
           bar.append(node('p', '',
@@ -2164,7 +2174,11 @@
           if (found.def.note) bar.append(node('p', 'concept-note', found.def.note));
           const add = node('button', 'btn-copy', '➕ أضِف هذه البنود');
           add.type = 'button';
-          add.addEventListener('click', () => { conceptAdded = true; renderResults(); });
+          add.addEventListener('click', () => {
+            conceptAdded = true;
+            conceptJustAdded = true;
+            renderResults();
+          });
           bar.append(add);
           list.append(bar);
         }
@@ -2409,6 +2423,7 @@
       searchInput.value = value;
       lastQuery = value;
       conceptAdded = false;
+      conceptJustAdded = false;
       clearSearchBtn.style.display = 'block';
       results = search(value);
       selectedId = results[0]?.id || null;
