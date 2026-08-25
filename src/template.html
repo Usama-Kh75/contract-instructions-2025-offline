@@ -1040,6 +1040,46 @@
       font-weight: 800;
     }
 
+    /* The concept offer is an offer, not a result: it sits with the results
+       but is plainly not one of them. */
+    .concept-bar {
+      border: 1px dashed var(--primary-light);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 14px 16px;
+      margin: 12px 0;
+      line-height: 1.7;
+    }
+
+    .concept-bar p { margin: 0 0 8px; font-size: 0.92rem; }
+
+    .concept-bar .concept-note {
+      opacity: 0.75;
+      font-size: 0.85rem;
+      border-right: 2px solid var(--primary-light);
+      padding-right: 10px;
+    }
+
+    .concept-divider {
+      margin: 22px 0 10px;
+      padding: 8px 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      font-weight: 800;
+      font-size: 0.88rem;
+      opacity: 0.85;
+    }
+
+    .via-tag {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--primary-light);
+      font-size: 0.75rem;
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
     .miss-box {
       margin-top: 18px;
       padding: 14px 16px;
@@ -1503,6 +1543,12 @@
     }
 
     let results = [], selectedId = null, selectedChapter = 1, chapterPage = 0, selectedKind = 'chapter';
+    // whether the reader accepted the concept layer's offer for THIS query;
+    // it resets on every new search, so the expansion is never sticky
+    let conceptAdded = false;
+    // everything currently on screen, matches plus accepted extras - the list
+    // selectResult must look in, or clicking an added clause finds nothing
+    let shownResults = [];
     let currentZoom = 1;
 
     // FNV-1a Hash Verification
@@ -1745,6 +1791,18 @@
     // المواد before الضوابط when both carry the same number
     const kindRank = a => /^ضوابط/.test(String(a ?? '')) ? 1 : 0;
 
+    // document order, not relevance: the main body precedes the annexes, so
+    // kind is compared before number - otherwise article 6 lands after annex 5
+    function cmpResults(a, b) {
+      const ak = kindRank(a.article), bk = kindRank(b.article);
+      if (ak !== bk) return ak - bk;
+      const an = artNum(a.article), bn = artNum(b.article);
+      if (an !== bn) return an - bn;
+      const cc = cmpClause(a.clause, b.clause);
+      if (cc !== 0) return cc;
+      return a.pdfPage - b.pdfPage;
+    }
+
     function search(value) {
       const nq = q(value);
       if (!nq) return [];
@@ -1773,16 +1831,8 @@
         }
         return { c: x.c, score };
       }).filter(r => r.score > 0).sort((a, b) => {
-        // the whole main body precedes the annexes in the printed document,
-        // so kind comes before number - otherwise article 6 lands after annex 5
-        const ak = kindRank(a.c.article), bk = kindRank(b.c.article);
-        if (ak !== bk) return ak - bk;
-        const an = artNum(a.c.article), bn = artNum(b.c.article);
-        if (an !== bn) return an - bn;
-        const cc = cmpClause(a.c.clause, b.c.clause);
-        if (cc !== 0) return cc;
-        if (a.c.pdfPage !== b.c.pdfPage) return a.c.pdfPage - b.c.pdfPage;
-        return b.score - a.score;
+        const d = cmpResults(a.c, b.c);
+        return d !== 0 ? d : b.score - a.score;
       }).map(r => r.c);
     }
 
@@ -1962,13 +2012,96 @@
       }
     });
 
+    // --- Concept Layer ---
+    // The document names one thing several ways: التأمينات is also خطاب ضمان,
+    // الإحالة is also الترسية. No stemmer or fuzzy match bridges those - they
+    // share neither root nor spelling - so the mapping is a curated table.
+    // It NEVER expands a search on its own. In a legal reference a clause
+    // shown because the search guessed is worse than one not shown: the first
+    // enters a committee memo, the second gets searched again.
+    const concepts = Array.isArray(data.concepts) ? data.concepts : [];
+    const conceptIdx = concepts.map(k => ({
+      def: k,
+      terms: (k.terms || []).map(t => ({ raw: t, n: q(t) })).filter(t => t.n)
+    })).filter(k => k.terms.length > 1);
+
+    // Matching is by WHOLE WORDS, never by raw substring. A substring rule
+    // fires on any fragment: «عقد» would trigger «إنهاء العقد», «عمل» would
+    // trigger «سحب العمل», «مبلغ» would trigger «المبلغ التخميني» — offering
+    // a reader a concept they never asked about. The leading ال is folded so
+    // «تأمينات» and «التأمينات» count as one word.
+    const wordsOf = s => s.split(' ').filter(Boolean);
+    const sameWord = (a, b) => a === b || a.replace(/^ال/, '') === b.replace(/^ال/, '');
+
+    function hasPhrase(hay, needle) {
+      if (!needle.length || needle.length > hay.length) return false;
+      for (let i = 0; i + needle.length <= hay.length; i++) {
+        let ok = true;
+        for (let j = 0; j < needle.length; j++) {
+          if (!sameWord(hay[i + j], needle[j])) { ok = false; break; }
+        }
+        if (ok) return true;
+      }
+      return false;
+    }
+
+    function conceptFor(value) {
+      const qw = wordsOf(q(value));
+      if (!qw.length) return null;
+      for (const k of conceptIdx) {
+        for (const t of k.terms) {
+          const tw = wordsOf(t.n);
+          // the query says the whole term, or - only when the query is itself
+          // a phrase - the term says the whole query
+          if (hasPhrase(qw, tw) || (qw.length >= 2 && hasPhrase(tw, qw))) return k;
+        }
+      }
+      return null;
+    }
+
+    // clauses this concept's OTHER wordings reach that the query did not,
+    // each tagged with the wording that found it
+    // search() rescans and sorts the whole index; without this cache every
+    // render pays that once per synonym, twice over when the offer is accepted
+    const conceptHits = new Map();
+    function hitsFor(term) {
+      const key = q(term);
+      if (!conceptHits.has(key)) conceptHits.set(key, search(term));
+      return conceptHits.get(key);
+    }
+
+    function conceptExtras(value, found) {
+      const k = conceptFor(value);
+      if (!k) return null;
+      const have = new Set(found.map(c => c.id));
+      const extras = [];
+      const wordings = new Set();
+      for (const t of k.terms) {
+        for (const c of hitsFor(t.raw)) {
+          if (have.has(c.id)) continue;
+          have.add(c.id);
+          extras.push({ clause: c, via: t.raw });
+          wordings.add(t.raw);
+        }
+      }
+      if (!extras.length) return null;
+      extras.sort((a, b) => cmpResults(a.clause, b.clause));
+      return { def: k.def, extras, wordings: [...wordings] };
+    }
+
     // --- Render Search Results ---
     function renderResults() {
       const list = document.getElementById('resultList');
       list.replaceChildren();
       document.getElementById('resultCount').textContent = results.length + ' نتيجة مطابقة';
 
-      if (!results.length) {
+      // computed BEFORE the empty state, deliberately: a bridge term like
+      // «الأمر التغييري» returns nothing on its own, and that is exactly the
+      // case the concept layer exists for
+      const found = conceptExtras(lastQuery, results);
+
+      if (!results.length && !found) {
+        shownResults = [];
         missStore.add(lastQuery);
         const e = node('div', 'empty');
         e.append(
@@ -1997,31 +2130,61 @@
         return;
       }
 
-      results.forEach((c, i) => {
+      const card = (c, i, via) => {
         const b = node('button', 'result-card' + (c.id === selectedId ? ' selected' : ''));
         b.type = 'button';
         b.dataset.id = c.id;
         b.append(node('span', 'idx', String(i + 1).padStart(2, '0')));
-        
+
         const body = node('span', '');
         body.append(
           meta([c.article, c.clause, c.category]),
           node('h3', '', c.title),
           node('p', '', c.explanation)
         );
+        // a clause is never shown without saying why it is here
+        if (via) body.append(node('span', 'via-tag', 'عُثر عليه بصيغة: ' + via));
         b.append(body, node('span', 'check', '✓'));
         b.addEventListener('click', () => selectResult(c.id));
-        list.append(b);
-      });
+        return b;
+      };
 
-      const selected = results.find(c => c.id === selectedId) || results[0];
-      renderSource(selected);
+      results.forEach((c, i) => list.append(card(c, i)));
+
+      if (found) {
+        if (conceptAdded) {
+          list.append(node('div', 'concept-divider',
+            'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')'));
+          found.extras.forEach((x, i) => list.append(card(x.clause, results.length + i, x.via)));
+        } else {
+          const bar = node('div', 'concept-bar');
+          bar.append(node('p', '',
+            'يسمّي المستند هذا المفهوم أيضاً: ' + found.wordings.join('، ') +
+            ' — وفيها ' + found.extras.length + ' بنداً آخر لم يظهر في نتائجك.'));
+          if (found.def.note) bar.append(node('p', 'concept-note', found.def.note));
+          const add = node('button', 'btn-copy', '➕ أضِف هذه البنود');
+          add.type = 'button';
+          add.addEventListener('click', () => { conceptAdded = true; renderResults(); });
+          bar.append(add);
+          list.append(bar);
+        }
+      }
+
+      shownResults = found && conceptAdded ? results.concat(found.extras.map(x => x.clause)) : results;
+      const added = found && conceptAdded ? found.extras.length : 0;
+      document.getElementById('resultCount').textContent =
+        results.length
+          ? results.length + ' نتيجة مطابقة' + (added ? ' + ' + added + ' بصيغ أخرى' : '')
+          : (added ? added + ' نتيجة بصيغ أخرى للمفهوم' : 'لا نتيجة بهذه الصيغة');
+
+      const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
+      renderSource(selected || null);
     }
 
     function selectResult(id) {
       selectedId = id;
       document.querySelectorAll('.result-card').forEach(b => b.classList.toggle('selected', b.dataset.id === id));
-      const chosen = results.find(c => c.id === id);
+      const chosen = shownResults.find(c => c.id === id) || results.find(c => c.id === id);
       renderSource(chosen);
 
       setTimeout(() => {
@@ -2226,6 +2389,11 @@
 
     function showChapters() {
       results = [];
+      // leaving these behind lets a later click resolve an id against the
+      // previous query's list and open an unrelated clause
+      shownResults = [];
+      conceptAdded = false;
+      lastQuery = '';
       selectedId = null;
       document.getElementById('workspace').classList.remove('visible');
       document.getElementById('chapters').style.display = 'block';
@@ -2240,6 +2408,7 @@
       }
       searchInput.value = value;
       lastQuery = value;
+      conceptAdded = false;
       clearSearchBtn.style.display = 'block';
       results = search(value);
       selectedId = results[0]?.id || null;

@@ -112,9 +112,61 @@ for (const [t, srcs] of dangling) {
   warn('مرجع إلى «' + t + '» غير موجود، من ' + srcs.length + ' موضعاً — أولها ' + srcs[0]);
 }
 
+// ── 8. جدول المفاهيم ─────────────────────────────────────────────────────
+const norm = s => String(s ?? '').normalize('NFKD')
+  .replace(/[ً-ٰٟ]/g, '').replace(/ـ/g, '')
+  .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+  .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+  .replace(/[^\p{L}\p{N}%]+/gu, ' ').replace(/\s+/g, ' ').trim();
+
+const haystacks = clauses.map(c =>
+  norm([c.title, c.officialText, c.explanation, (c.keywords || []).join(' ')].join(' ')));
+// يحاكي سلوك search() في الصفحة: كل كلمات الاستعلام حاضرة، لا العبارة
+// متصلة. عدّها بالعبارة المتصلة يجعل «التغيير في العقد» تبدو بلا نتائج
+// وهي تُرجع أربع عشرة.
+const STOP = ['هل', 'ما', 'من', 'في', 'عن', 'هي', 'علي', 'الي'];
+const hits = term => {
+  const tokens = norm(term).split(' ').filter(t => t.length > 1 && !STOP.includes(t));
+  if (!tokens.length) return 0;
+  return haystacks.filter(x => tokens.every(t => x.includes(t))).length;
+};
+
+const concepts = readJson(path.join(SRC, 'concepts.json'));
+const conceptIds = new Set();
+const termOwner = new Map();
+for (const k of concepts) {
+  const at = 'concepts.json › ' + (k.label || k.id || '؟');
+  if (!k.id) fail(at + ': بلا معرّف');
+  else if (conceptIds.has(k.id)) fail(at + ': معرّف مفهوم مكرر «' + k.id + '»');
+  else conceptIds.add(k.id);
+  if (!k.label) fail(at + ': بلا عنوان');
+  if (!Array.isArray(k.terms) || k.terms.length < 2) {
+    fail(at + ': المفهوم يحتاج مصطلحين على الأقل، وإلا فلا شيء يربطه بشيء');
+    continue;
+  }
+
+  const counts = k.terms.map(t => [t, hits(t)]);
+  // مصطلح بلا نتائج ليس مدخلاً ميتاً بل أنفعها: هو لفظ الميدان الذي لا
+  // يستعمله النص، والجسر إليه. «الأمر التغييري» مثاله.
+  const live = counts.filter(([, n]) => n > 0);
+  if (!live.length) fail(at + ': لا مصطلح من مصطلحاته يرد في المستند إطلاقاً — المفهوم كله لا يصل إلى شيء');
+  else if (live.length === 1 && counts.length > 1 && live[0][1] === Math.max(...counts.map(c => c[1]))) {
+    const bridges = counts.filter(([, n]) => n === 0).map(([t]) => t);
+    if (!bridges.length) warn(at + ': مصطلح واحد فقط يصل إلى نتائج — راجع فائدة الباقي');
+  }
+
+  for (const [t] of counts) {
+    const key = norm(t);
+    if (termOwner.has(key) && termOwner.get(key) !== k.id) {
+      warn(at + ': المصطلح «' + t + '» يظهر أيضاً في مفهوم «' + termOwner.get(key) + '» — أولهما في الملف يفوز');
+    } else termOwner.set(key, k.id);
+  }
+}
+
 // ── التقرير ───────────────────────────────────────────────────────────────
 console.log('بنود: ' + clauses.length + '  |  وحدات: ' + order.length +
-            '  |  حرفية: ' + clauses.filter(c => c.verbatim === true).length);
+            '  |  حرفية: ' + clauses.filter(c => c.verbatim === true).length +
+            '  |  مفاهيم: ' + concepts.length);
 console.log('');
 if (warnings.length) {
   console.log('تنبيهات (' + warnings.length + '):');

@@ -65,11 +65,14 @@ function assemble() {
   const chapters = readJson(path.join(SRC, 'chapters.json'));
   const annexes = readJson(path.join(SRC, 'annexes.json'));
   const meta = readJson(path.join(SRC, 'meta.json'));
+  const concepts = readJson(path.join(SRC, 'concepts.json'));
 
   const integrity = fnv1a(JSON.stringify({ clauses, chapters, annexes, credit: meta.credit }));
 
   // ترتيب المفاتيح هنا مقصود: تسلسل الجذر يدخل في البصمة المطبوعة على
-  // الصفحة، فتغييره يغيّرها دون أن يتغير حرف واحد من النص
+  // الصفحة، فتغييره يغيّرها دون أن يتغير حرف واحد من النص.
+  // و«المفاهيم» خارج البصمة عمداً كالنسخة والتاريخ: هي أداة تنقّل لا نصّاً
+  // رسمياً، فتصحيحُ مترادفٍ يجب ألا يجعل النسخة تبدو معبوثاً بها.
   return {
     data: {
       clauses,
@@ -78,7 +81,8 @@ function assemble() {
       version: meta.version,
       releaseDate: meta.releaseDate,
       credit: meta.credit,
-      annexes
+      annexes,
+      concepts
     },
     integrity
   };
