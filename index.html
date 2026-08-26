@@ -9,8 +9,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0f4c42">
-  <link rel="apple-touch-icon" href="ministry-logo.jpg">
-  <link rel="icon" href="ministry-logo.jpg">
+  <link rel="apple-touch-icon" href="app-icon.jpg">
+  <link rel="icon" href="app-icon.jpg">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="تعليمات العقود 2025">
@@ -1110,6 +1110,14 @@
 
     .offline-status { font-size: 0.82rem; opacity: 0.85; }
 
+    .disclaimer {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      opacity: 0.72;
+      max-width: 62ch;
+    }
+
     .miss-box {
       margin-top: 18px;
       padding: 14px 16px;
@@ -1441,17 +1449,13 @@
   <header class="topbar">
     <div class="topbar-content">
       <div class="brand">
-        <img class="brand-mark" src="ministry-logo.jpg" alt="شعار وزارة التخطيط">
+        <img class="brand-mark" src="app-icon.jpg" alt="">
         <div class="brand-text">
           <strong>تعليمات تنفيذ العقود الحكومية لعام 2025</strong>
-          <span>المرجع التفاعلي المعتمد (رقم 1 لسنة 2025)</span>
+          <span>مرجع تفاعلي غير رسمي — رقم (1) لسنة 2025</span>
         </div>
       </div>
       <div class="topbar-end">
-        <span class="org-badge" id="orgBadge">
-          <img class="org-mark" id="orgLogo" src="basra-oil-logo.jpg" alt="">
-          <span>شركة نفط البصرة</span>
-        </span>
         <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
         <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>
         <button class="btn-action" id="indexButton" type="button">↩ الفهرس العام</button>
@@ -1572,6 +1576,9 @@
       <div>
         <strong>دليل تعليمات تنفيذ العقود العامة لسنة 2025 (رقم 1)</strong>
         <p>© 2025 م. أسامة خليل هاشم — جميع الحقوق محفوظة وموثقة رقمياً</p>
+        <p class="disclaimer">مرجع غير رسمي أعدّه فرد بجهده الخاص، ولا يصدر عن أي جهة
+        حكومية ولا يمثّلها. والحُجّة عند الاستشهاد هي المستند المطبوع الصادر عن الجهة
+        المختصة، وصورته مرفقة مع كل بند للتحقق.</p>
       </div>
       <div class="footer-meta">
         <span class="release-stamp" id="releaseStamp"></span>
@@ -24896,7 +24903,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.1",
+  "version": "1.2",
   "releaseDate": "2026-08-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25216,11 +25223,6 @@
 
     // The organisation mark is optional: if the file is not beside the HTML the
     // name still shows, rather than a broken-image icon next to it.
-    const orgLogo = document.getElementById('orgLogo');
-    if (orgLogo) {
-      orgLogo.addEventListener('error', () => orgLogo.classList.add('is-missing'), { once: true });
-      if (orgLogo.complete && !orgLogo.naturalWidth) orgLogo.classList.add('is-missing');
-    }
     // The computed hash is only "approved" when it matches the one shipped with
     // the data. On a mismatch, showing the recomputed hash under that label would
     // let a modified copy present its own fingerprint as proof of authenticity.

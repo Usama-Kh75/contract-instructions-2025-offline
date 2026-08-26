@@ -7,13 +7,12 @@ const SHELL = 'shell-v' + VERSION;   // الصفحة وملحقاتها، تتغ
 const PAGES = 'pages-v1';            // صور الصفحات، لا تتغير مع تغيّر البرنامج
 
 // الهيكل وحده يُخزَّن تلقائياً — نحو ميغابايت واحد. أما صور الصفحات
-// فـ33 ميغابايت، ولا تُنزَّل إلا بطلب صريح من القارئ.
+// فـ31 ميغابايت، ولا تُنزَّل إلا بطلب صريح من القارئ.
 const SHELL_FILES = [
   './',
   './index.html',
   './manifest.json',
-  './ministry-logo.jpg',
-  './basra-oil-logo.jpg'
+  './app-icon.jpg'
 ];
 
 self.addEventListener('install', e => {

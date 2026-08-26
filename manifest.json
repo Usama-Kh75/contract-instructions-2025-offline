@@ -8,14 +8,14 @@
   "theme_color": "#123f3b",
   "icons": [
     {
-      "src": "./ministry-logo.jpg",
-      "sizes": "554x554",
+      "src": "./app-icon.jpg",
+      "sizes": "512x512",
       "type": "image/jpeg",
       "purpose": "any"
     }
   ],
   "scope": "./",
-  "description": "مرجع تفاعلي لتعليمات تنفيذ العقود العامة العراقية رقم (1) لسنة 2025، يعمل بلا إنترنت.",
+  "description": "مرجع تفاعلي غير رسمي لتعليمات تنفيذ العقود العامة العراقية رقم (1) لسنة 2025، يعمل بلا إنترنت.",
   "lang": "ar",
   "dir": "rtl"
 }
