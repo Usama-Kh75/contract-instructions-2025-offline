@@ -2,7 +2,7 @@
    مُولَّد من src/sw.js؛ لا تحرّر الملف في الجذر. */
 'use strict';
 
-const VERSION = '1.4';
+const VERSION = '1.5';
 const SHELL = 'shell-v' + VERSION;   // الصفحة وملحقاتها، تتغير مع كل إصدار
 const PAGES = 'pages-v1';            // صور الصفحات، لا تتغير مع تغيّر البرنامج
 
@@ -15,10 +15,20 @@ const SHELL_FILES = [
   './app-icon.jpg'
 ];
 
+// addAll هي عملية كلّية: يُسقط فشلُ ملفٍ واحد التخزينَ كلَّه فلا يُحفظ شيء.
+// وذلك يقع فعلاً أثناء نشر GitHub، إذ يردّ ملفٌ 404 للحظة. نحفظ كلاً على
+// حدة، فيبقى ما نجح ولا يجرّه الفاشل معه.
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(SHELL).then(c => c.addAll(SHELL_FILES)).then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const c = await caches.open(SHELL);
+    await Promise.all(SHELL_FILES.map(async f => {
+      try {
+        const res = await fetch(f, { cache: 'reload' });
+        if (res.ok) await c.put(f, res);
+      } catch (err) { /* يُعاد جلبه عند أول زيارة متصلة */ }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {

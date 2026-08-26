@@ -1110,6 +1110,17 @@
 
     .offline-status { font-size: 0.82rem; opacity: 0.85; }
 
+    .offline-state {
+      width: 100%;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      margin-top: 4px;
+    }
+
+    .offline-state.ok { color: #7fc8a0; }
+    .offline-state.partial { opacity: 0.85; }
+    .offline-state.bad { color: #e8a87c; font-weight: 700; }
+
     .disclaimer {
       margin-top: 8px;
       font-size: 0.8rem;
@@ -1586,6 +1597,7 @@
         <span class="offline-box" id="offlineBox" hidden>
           <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ الصفحات للعمل بلا إنترنت (31 م.ب)</button>
           <span class="offline-status" id="offlineStatus"></span>
+          <span class="offline-state" id="offlineState"></span>
         </span>
       </div>
     </div>
@@ -24903,7 +24915,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.4",
+  "version": "1.5",
   "releaseDate": "2026-08-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25707,6 +25719,46 @@
       });
     }
 
+    // Offline readiness is invisible until the moment it fails - in a
+    // committee room, with no signal. Report it plainly instead, so it can be
+    // checked beforehand rather than discovered.
+    async function offlineStatus() {
+      if (!isWebCopy || !('caches' in window)) return null;
+      const controlled = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      let shell = false, pages = 0;
+      try {
+        for (const name of await caches.keys()) {
+          const c = await caches.open(name);
+          if (name.indexOf('shell-') === 0 && !shell) {
+            shell = !!(await c.match('./index.html')) || !!(await c.match('./'));
+          }
+          if (name.indexOf('pages-') === 0) pages = (await c.keys()).length;
+        }
+      } catch (e) { return null; }
+      const total = new Set(data.clauses.map(c => c.pdfPage)).size;
+      return { controlled, shell, pages, total };
+    }
+
+    async function renderOfflineStatus(el) {
+      if (!el) return;
+      const s = await offlineStatus();
+      if (!s) { el.textContent = ''; return; }
+      el.classList.remove('ok', 'partial', 'bad');
+      if (!s.controlled || !s.shell) {
+        el.classList.add('bad');
+        el.textContent = '⚠ لم يُحفظ البرنامج بعد للعمل بلا إنترنت — حدّث الصفحة وأنت متصل، ثم أعد الفتح.';
+      } else if (s.pages >= s.total) {
+        el.classList.add('ok');
+        el.textContent = '✔ جاهز للعمل بلا إنترنت — البرنامج و' + s.total + ' صفحة محفوظة.';
+      } else if (s.pages > 0) {
+        el.classList.add('partial');
+        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت. الصور المحفوظة: ' + s.pages + ' من ' + s.total + '.';
+      } else {
+        el.classList.add('partial');
+        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت، ولم تُحفظ صور الصفحات بعد.';
+      }
+    }
+
     // Downloading all 174 page scans is 33 MB of somebody's mobile data.
     // It happens on an explicit press, never on its own, and reports progress.
     async function cacheAllPages(btn, status) {
@@ -25735,6 +25787,7 @@
         ? 'حُفظت ' + (done - failed) + ' صفحة، وتعذّرت ' + failed + '. أعد المحاولة عند اتصال أفضل.'
         : '✔ حُفظت كل الصفحات. يعمل الدليل الآن بلا إنترنت.';
       btn.disabled = false;
+      renderOfflineStatus(document.getElementById('offlineState'));
     }
 
     {
@@ -25744,6 +25797,12 @@
       if (box && btn && isWebCopy && 'caches' in window) {
         box.hidden = false;
         btn.addEventListener('click', () => cacheAllPages(btn, status));
+        const state = document.getElementById('offlineState');
+        renderOfflineStatus(state);
+        // the worker may take control a moment after the page is painted
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.ready.then(() => renderOfflineStatus(state)).catch(() => { });
+        }
       }
     }
 
