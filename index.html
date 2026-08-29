@@ -24929,7 +24929,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.7",
+  "version": "1.8",
   "releaseDate": "2026-08-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25211,6 +25211,9 @@
     // scattered-word matches start folded; they are disclosed and counted,
     // never dropped
     let looseShown = false;
+    // set when the reader arrives by clicking a reference rather than by
+    // searching; carries the unit so the whole of it stays one press away
+    let jumpUnit = null;
     // set only by the click, so a re-render for any other reason does not
     // yank the reader back to the divider
     let conceptJustAdded = false;
@@ -26021,10 +26024,15 @@
       conceptAdded = false;
       conceptJustAdded = false;
       looseShown = false;
-      results = list.slice();
+      const focused = list.find(c => c.id === focusId) || null;
+      // a reference names one clause; landing the reader in all 90 of the
+      // unit's clauses buries the thing they asked for
+      results = focused ? [focused] : list.slice();
       shownResults = results;
-      selectedId = (focusId && list.some(c => c.id === focusId)) ? focusId : results[0].id;
-      document.getElementById('queryTitle').textContent = '«' + target + '»';
+      selectedId = results[0].id;
+      jumpUnit = { article: target, focused: !!focused, size: list.length };
+      document.getElementById('queryTitle').textContent =
+        '«' + target + (focused ? ' / ' + focused.clause : '') + '»';
       document.getElementById('chapters').style.display = 'none';
       document.getElementById('workspace').classList.add('visible');
       indexBtn.style.display = 'inline-flex';
@@ -26038,7 +26046,9 @@
     function renderResults() {
       const list = document.getElementById('resultList');
       list.replaceChildren();
-      document.getElementById('resultCount').textContent = results.length + ' نتيجة مطابقة';
+      document.getElementById('resultCount').textContent = jumpUnit
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + results.length + ' بنداً')
+        : results.length + ' نتيجة مطابقة';
 
       // computed BEFORE the empty state, deliberately: a bridge term like
       // «الأمر التغييري» returns nothing on its own, and that is exactly the
@@ -26138,6 +26148,18 @@
         }
       }
 
+      if (jumpUnit && jumpUnit.focused) {
+        const bar = node('div', 'concept-bar');
+        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو واحد من '
+          + jumpUnit.size + ' بنداً في ' + jumpUnit.article + '.'));
+        const all = node('button', 'btn-copy btn-quiet', 'اعرض ' + jumpUnit.article + ' كاملةً');
+        all.type = 'button';
+        const target = jumpUnit.article;
+        all.addEventListener('click', () => showArticle(target));
+        bar.append(all);
+        list.append(bar);
+      }
+
       if (found) {
         if (conceptAdded) {
           const divider = node('div', 'concept-divider',
@@ -26176,8 +26198,9 @@
       if (exact.length) parts.push(exact.length + (phraseQuery ? ' نتيجة بالعبارة' : ' نتيجة مطابقة'));
       if (loose.length) parts.push(loose.length + ' متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
       if (added) parts.push(added + ' بصيغ أخرى');
-      document.getElementById('resultCount').textContent =
-        parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة';
+      document.getElementById('resultCount').textContent = jumpUnit
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + results.length + ' بنداً')
+        : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
       renderSource(selected || null);
@@ -26412,6 +26435,7 @@
       shownResults = [];
       conceptAdded = false;
       looseShown = false;
+      jumpUnit = null;
       lastQuery = '';
       selectedId = null;
       document.getElementById('workspace').classList.remove('visible');
@@ -26430,6 +26454,7 @@
       conceptAdded = false;
       conceptJustAdded = false;
       looseShown = false;
+      jumpUnit = null;
       clearSearchBtn.style.display = 'block';
       results = search(value);
       selectedId = results[0]?.id || null;
