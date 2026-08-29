@@ -1584,6 +1584,8 @@
     <div class="lightbox-header">
       <span class="lightbox-title" id="lightboxTitle"></span>
       <div class="lightbox-controls">
+        <button class="lightbox-btn" id="lbPrevBtn" type="button" hidden>› السابقة</button>
+        <button class="lightbox-btn" id="lbNextBtn" type="button" hidden>التالية ‹</button>
         <button class="lightbox-btn" id="zoomInBtn" type="button">➕ تكبير</button>
         <button class="lightbox-btn" id="zoomOutBtn" type="button">➖ تصغير</button>
         <button class="lightbox-btn" id="rotateBtn" type="button" title="تدوير ربع دورة — يُحفظ للصفحة">⟳ تدوير</button>
@@ -2080,6 +2082,8 @@
       lightboxImg.style.height = '';
       lightboxStage.style.width = '';
       lightboxStage.style.height = '';
+      lightboxPageNo = pageNoOf(src);
+      syncLightboxPager();
       lightboxImg.src = src;
       lightbox.classList.add('active');
       // Installed to a home screen there is no browser chrome, so the phone's
@@ -2100,6 +2104,56 @@
 
     // fromPop: the reader pressed Back, so the entry is already gone and
     // calling history.back() again would take them off the page
+    // The pager lives on the screen BEHIND this one. On a phone the enlarged
+    // view is where the page is actually readable, so stepping a page meant
+    // close, press, re-open. Step from in here instead.
+    const lbPrev = document.getElementById('lbPrevBtn');
+    const lbNext = document.getElementById('lbNextBtn');
+    let lightboxPageNo = null;
+
+    function pageNoOf(src) {
+      const m = String(src || '').match(/page-(\d+)\.jpg$/);
+      return m ? parseInt(m[1], 10) : null;
+    }
+
+    function pageLabel(n) {
+      const sec = sectionFor(n);
+      const head = sec
+        ? (sec.kind === 'annex' ? 'ضوابط رقم (' + sec.number + ')' : 'الفصل ' + sec.number)
+        : 'المستند';
+      return head + ' — الصفحة المطبوعة ' + (n - 6);
+    }
+
+    function syncLightboxPager() {
+      const on = lightboxPageNo !== null;
+      lbPrev.hidden = !on;
+      lbNext.hidden = !on;
+      if (!on) return;
+      lbPrev.disabled = lightboxPageNo <= DOC_FIRST;
+      lbNext.disabled = lightboxPageNo >= DOC_LAST;
+    }
+
+    function stepLightboxPage(d) {
+      if (lightboxPageNo === null) return;
+      const t = lightboxPageNo + d;
+      if (t < DOC_FIRST || t > DOC_LAST) return;
+      lightboxPageNo = t;
+      const src = './pages/page-' + t + '.jpg';
+      lightboxSrc = src;
+      // each page remembers its own turn; zoom is the reader's, so it stays
+      lightboxRotation = rotStore.get(src);
+      lightboxTitle.textContent = pageLabel(t);
+      lightboxImg.src = src;
+      if (lightboxImg.complete && lightboxImg.naturalWidth) applyView();
+      // keep the screen behind in step, so closing lands where the reader is
+      const sec = sectionFor(t);
+      if (sec) { selectedKind = sec.kind; selectedChapter = sec.number; chapterPage = t; renderChapter(); }
+      syncLightboxPager();
+    }
+
+    lbPrev.addEventListener('click', () => stepLightboxPage(-1));
+    lbNext.addEventListener('click', () => stepLightboxPage(1));
+
     function closeLightbox(fromPop) {
       lightbox.classList.remove('active');
       const had = lightboxHistory;
@@ -2142,6 +2196,11 @@
     window.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeLightbox();   // never a popstate
       // 'r' and 'ق' are the same physical key on the two layouts in use here
+      if (lightbox.classList.contains('active') && lightboxPageNo !== null) {
+        // RTL: ArrowRight moves back through the document, ArrowLeft forward
+        if (e.key === 'ArrowRight') { e.preventDefault(); stepLightboxPage(-1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); stepLightboxPage(1); }
+      }
       if (lightbox.classList.contains('active') && (e.key === 'r' || e.key === 'R' || e.key === 'ق')) {
         document.getElementById('rotateBtn').click();
       }
