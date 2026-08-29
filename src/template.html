@@ -2243,18 +2243,24 @@
     async function offlineStatus() {
       if (!isWebCopy || !('caches' in window)) return null;
       const controlled = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
-      let shell = false, pages = 0;
+      let shell = false;
+      const seenPages = new Set();
       try {
         for (const name of await caches.keys()) {
           const c = await caches.open(name);
           if (name.indexOf('shell-') === 0 && !shell) {
             shell = !!(await c.match('./index.html')) || !!(await c.match('./'));
           }
-          if (name.indexOf('pages-') === 0) pages = (await c.keys()).length;
+          // count distinct URLs across every pages-* cache: assigning per
+          // cache would let one version's count overwrite another's, and the
+          // answer would depend on the order the keys happen to come back in
+          if (name.indexOf('pages-') === 0) {
+            for (const req of await c.keys()) seenPages.add(req.url);
+          }
         }
       } catch (e) { return null; }
       const total = new Set(data.clauses.map(c => c.pdfPage)).size;
-      return { controlled, shell, pages, total };
+      return { controlled, shell, pages: seenPages.size, total };
     }
 
     async function renderOfflineStatus(el) {
@@ -2277,12 +2283,29 @@
       }
     }
 
-    // Downloading all 174 page scans is 33 MB of somebody's mobile data.
+    // must match PAGES in sw.js; naming it once keeps the page and the worker
+    // from drifting apart over a version bump
+    const PAGES_CACHE = 'pages-v1';
+
+    // Downloading the 168 page scans is 31 MB of somebody's mobile data.
     // It happens on an explicit press, never on its own, and reports progress.
     async function cacheAllPages(btn, status) {
       if (!('caches' in window)) { status.textContent = 'متصفحك لا يدعم الحفظ للعمل بلا إنترنت.'; return; }
       btn.disabled = true;
-      const cache = await caches.open('pages-v1');
+      try {
+        await cachePages(status);
+      } catch (e) {
+        // without this the button stays dead and the reader has no way back
+        // except reloading, with nothing on screen saying why
+        status.textContent = 'تعذّر الحفظ على هذا المتصفح. جرّب إغلاق وضع التصفّح الخاص أو إفساح مساحة تخزين.';
+      } finally {
+        btn.disabled = false;
+        renderOfflineStatus(document.getElementById('offlineState'));
+      }
+    }
+
+    async function cachePages(status) {
+      const cache = await caches.open(PAGES_CACHE);
       // The list comes from the clauses themselves, so it can never drift
       // from what the app is able to show. A hand-written range asked for
       // six pages that do not exist and reported them to the reader as
@@ -2293,7 +2316,11 @@
       for (const p of pages) {
         const url = './pages/page-' + p + '.jpg';
         try {
-          if (!(await cache.match(url))) {
+          // a stored response is only a saved page if it was a good one;
+          // nothing writes a failure today, but counting one as saved would
+          // promise offline access that is not there
+          const have = await cache.match(url);
+          if (!have || !have.ok) {
             const res = await fetch(url);
             if (res.ok) await cache.put(url, res.clone()); else failed++;
           }
@@ -2304,8 +2331,6 @@
       status.textContent = failed
         ? 'حُفظت ' + (done - failed) + ' صفحة، وتعذّرت ' + failed + '. أعد المحاولة عند اتصال أفضل.'
         : '✔ حُفظت كل الصفحات. يعمل الدليل الآن بلا إنترنت.';
-      btn.disabled = false;
-      renderOfflineStatus(document.getElementById('offlineState'));
     }
 
     {
