@@ -24929,7 +24929,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.6",
+  "version": "1.7",
   "releaseDate": "2026-08-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25946,36 +25946,75 @@
       return m;
     })();
 
-    const REF_RE = /(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)/g;
+    // Three shapes appear in the printed text, and they are tried longest
+    // first so a specific one is not eaten by a general one:
+    //   البند (رابعاً) من المادة (6)   → that clause of that unit
+    //   (سابعا) من هذه الضوابط          → that clause of THIS unit
+    //   المادة (18)                     → that unit
+    // written as a literal, not assembled from strings: the first version was
+    // built by concatenation and every backslash was eaten on the way in, so
+    // \s became a plain letter s and the pattern matched nothing at all
+    const REF_RE = /(?:(?:البند|الفقرة|الفقرات)\s*)?\(([^()]{1,40})\)\s*من\s*(?:(?:البند|الفقرة)\s*\([^()]{1,40}\)\s*من\s*)?(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)|\(([^()]{1,40})\)\s*من\s*(?:هذه|هذا)\s*(?:المادة|الماده|البند|الفقرة|الضوابط|التعليمات)|(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)/g;
 
-    // returns a fragment where every reference to an EXISTING unit other than
-    // this one is a button; everything else stays plain text
+    const ORD_RE = /^(?:اولا|ثانيا|ثالثا|رابعا|خامسا|سادسا|سابعا|ثامنا|تاسعا|عاشرا|حادي عشر|ثاني عشر|ثالث عشر|رابع عشر|خامس عشر)$/;
+
+    // «رابعا /أ، ب، ج» and «ثانيا"» both name the clause رابعاً / ثانياً;
+    // take the leading ordinal or letter and ignore the rest
+    function clauseTarget(article, inside) {
+      const list = articleIndex.get(article);
+      if (!list || !inside) return null;
+      // the print writes «سادسا"» with a quote standing in for the ending,
+      // and «( ثانيا")» with stray spaces - strip anything that is not a
+      // letter, digit or space before matching
+      const head = normClause(inside).split(/[\/،,]/)[0]
+        .replace(/[^\p{L}\p{N} ]+/gu, '').replace(/\s+/g, ' ').trim();
+      if (!head) return null;
+      // a bare letter like (أ) names a sub-clause, not a top-level one
+      if (!ORD_RE.test(head) && head.length > 2) return null;
+      for (const c of list) {
+        const seg = normClause(c.clause).split('/')[0].trim();
+        if (seg === head) return c;
+      }
+      return null;
+    }
+
     function linkRefs(text, selfArticle) {
       const src = String(text ?? '');
       const frag = document.createDocumentFragment();
-      let last = 0, m;
+      let last = 0, m, made = 0;
       REF_RE.lastIndex = 0;
       while ((m = REF_RE.exec(src)) !== null) {
-        const target = m[0].indexOf('ضوابط') === 0
-          ? 'ضوابط رقم (' + m[1] + ')'
-          : 'المادة (' + m[1] + ')';
-        if (target === selfArticle || !articleIndex.has(target)) continue;
+        const num = m[2] || m[4];
+        const article = num
+          ? (m[0].indexOf('ضوابط') >= 0 ? 'ضوابط رقم (' + num + ')' : 'المادة (' + num + ')')
+          : selfArticle;
+        const inside = m[1] || m[3] || null;
+        if (!articleIndex.has(article)) continue;
+
+        const clause = clauseTarget(article, inside);
+        // a same-unit reference that resolves to nothing is not a link
+        if (!num && !clause) continue;
+        if (article === selfArticle && !clause) continue;
+
         if (m.index > last) frag.append(src.slice(last, m.index));
         const btn = node('button', 'ref-link', m[0]);
         btn.type = 'button';
-        btn.title = 'انتقل إلى ' + target;
-        btn.addEventListener('click', () => showArticle(target));
+        btn.title = clause
+          ? 'انتقل إلى ' + article + ' / ' + clause.clause
+          : 'انتقل إلى ' + article;
+        btn.addEventListener('click', () => showArticle(article, clause && clause.id));
         frag.append(btn);
         last = m.index + m[0].length;
+        made++;
       }
-      if (!last) return null;              // no live reference in this text
+      if (!made) return null;
       if (last < src.length) frag.append(src.slice(last));
       return frag;
     }
 
     // jump straight to a unit rather than searching its name, which would
     // return every clause that merely mentions it
-    function showArticle(target) {
+    function showArticle(target, focusId) {
       const list = articleIndex.get(target);
       if (!list || !list.length) return;
       lastQuery = '';
@@ -25984,7 +26023,7 @@
       looseShown = false;
       results = list.slice();
       shownResults = results;
-      selectedId = results[0].id;
+      selectedId = (focusId && list.some(c => c.id === focusId)) ? focusId : results[0].id;
       document.getElementById('queryTitle').textContent = '«' + target + '»';
       document.getElementById('chapters').style.display = 'none';
       document.getElementById('workspace').classList.add('visible');
