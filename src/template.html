@@ -1122,6 +1122,12 @@
       margin-top: 8px;
     }
 
+    /* A class that sets `display` beats the browser's own [hidden] rule, so
+       `el.hidden = true` silently does nothing. It bit twice here: the PDF
+       button stayed visible on the web where the file is not published, and
+       the offline-save button showed on the local copy that needs neither. */
+    [hidden] { display: none !important; }
+
     .offline-status { font-size: 0.82rem; opacity: 0.85; }
 
     .offline-state {
@@ -2771,17 +2777,19 @@
       const pdf = node('a', 'full-pdf', '📑 فتح ملف التعليمات الكامل (PDF)');
       pdf.href = 'تعليمات تنفيذ العقود 2025.pdf';
       pdf.target = '_blank';
-      // the PDF ships with the archive but is not published on the web, so
-      // over http(s) the link would be dead - a button that does nothing is
-      // worse than no button
-      if (isWebCopy) {
-        pdf.hidden = true;
+
+      panel.append(head, ref, quote, explain, doc);
+
+      // The PDF ships with the archive but is not published on the web, so
+      // over http(s) the link would be dead. Attach it only once the file
+      // actually answers - not created-then-hidden, which is what failed.
+      if (!isWebCopy) {
+        panel.append(pdf);
+      } else {
         fetch(pdf.href, { method: 'HEAD' })
-          .then(res => { if (res.ok) pdf.hidden = false; })
+          .then(res => { if (res.ok) panel.append(pdf); })
           .catch(() => { });
       }
-
-      panel.append(head, ref, quote, explain, doc, pdf);
     }
 
     // --- Render Chapter Viewer ---
