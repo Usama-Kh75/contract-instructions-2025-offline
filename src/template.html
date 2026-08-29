@@ -2815,10 +2815,12 @@
 
       const total = end - c.pdfPage + 1, pos = offset + 1;
       const pager = document.querySelector('.pager');
-      pager.style.display = total > 1 ? 'flex' : 'none';
-      document.getElementById('pageCount').textContent = 'صفحة ' + pos + ' من ' + total;
-      document.getElementById('prevPage').disabled = chapterPage <= c.pdfPage;
-      document.getElementById('nextPage').disabled = chapterPage >= end;
+      pager.style.display = 'flex';
+      document.getElementById('pageCount').textContent =
+        'صفحة ' + pos + ' من ' + total + '  ·  ' +
+        (chapterPage - DOC_FIRST + 1) + ' من ' + (DOC_LAST - DOC_FIRST + 1) + ' في المستند';
+      document.getElementById('prevPage').disabled = chapterPage <= DOC_FIRST;
+      document.getElementById('nextPage').disabled = chapterPage >= DOC_LAST;
 
       const src = './pages/page-' + chapterPage + '.jpg';
       const imgEl = document.getElementById('chapterImage');
@@ -2830,14 +2832,35 @@
       document.getElementById('chapterImagePane').onclick = () => openLightbox(src, caption);
     }
 
+    // The 40 sections tile pages 7-174 with no gap, so paging need not stop
+    // at a section boundary. It used to: reaching the last page of a chapter
+    // meant going back to the index to pick the next one, even to see the
+    // page immediately after. Holding «التالية» now walks the whole document.
+    const SECTIONS = [
+      ...data.chapters.map(x => ({ kind: 'chapter', number: x.number, from: x.pdfPage, to: x.endPage || x.pdfPage })),
+      ...((data.annexes || []).map(x => ({ kind: 'annex', number: x.number, from: x.pdfPage, to: x.endPage || x.pdfPage })))
+    ].sort((a, b) => a.from - b.from);
+
+    const DOC_FIRST = SECTIONS.length ? SECTIONS[0].from : 7;
+    const DOC_LAST = SECTIONS.reduce((m, s) => Math.max(m, s.to), DOC_FIRST);
+
+    // one page can fall in two sections where they overlap; the first wins,
+    // which keeps forward paging monotonic
+    const sectionFor = page => SECTIONS.find(s => page >= s.from && page <= s.to) || null;
+
     function stepPage(d) {
+      const t = chapterPage + d;
+      if (t < DOC_FIRST || t > DOC_LAST) return;
       const c = currentSection();
       const end = c.endPage || c.pdfPage;
-      const t = chapterPage + d;
-      if (t >= c.pdfPage && t <= end) {
-        chapterPage = t;
-        renderChapter();
+      if (t < c.pdfPage || t > end) {
+        const next = sectionFor(t);
+        if (!next) return;
+        selectedKind = next.kind;
+        selectedChapter = next.number;
       }
+      chapterPage = t;
+      renderChapter();
     }
 
     document.getElementById('prevPage').addEventListener('click', () => stepPage(-1));

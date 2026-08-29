@@ -2,7 +2,7 @@
    مُولَّد من src/sw.js؛ لا تحرّر الملف في الجذر. */
 'use strict';
 
-const VERSION = '1.9';
+const VERSION = '1.10';
 const SHELL = 'shell-v' + VERSION;   // الصفحة وملحقاتها، تتغير مع كل إصدار
 const PAGES = 'pages-v1';            // صور الصفحات، لا تتغير مع تغيّر البرنامج
 
