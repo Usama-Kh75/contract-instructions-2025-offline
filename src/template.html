@@ -1087,6 +1087,20 @@
       font-weight: 800;
     }
 
+    /* an inline reference reads as part of the sentence, not as a widget */
+    .ref-link {
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      border-bottom: 1px dashed currentColor;
+      text-decoration: none;
+    }
+
+    .ref-link:hover { background: rgba(217, 164, 65, 0.25); border-radius: 3px; }
+
     .via-loose { opacity: 0.6; }
 
     .via-tag {
@@ -2353,6 +2367,70 @@
       return frag;
     }
 
+    // A clause that says «وفقاً لأحكام المادة (4)» sends the reader off to
+    // search for it by hand. Only 32 such references exist in the whole
+    // document, and 17 of them point at المادة (40) - the article every annex
+    // preamble cites as its authority to issue - so this is a small
+    // convenience, not a citation graph. It is built as such.
+    const articleIndex = (() => {
+      const m = new Map();
+      for (const c of data.clauses) {
+        if (!m.has(c.article)) m.set(c.article, []);
+        m.get(c.article).push(c);
+      }
+      for (const list of m.values()) list.sort(cmpResults);
+      return m;
+    })();
+
+    const REF_RE = /(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)/g;
+
+    // returns a fragment where every reference to an EXISTING unit other than
+    // this one is a button; everything else stays plain text
+    function linkRefs(text, selfArticle) {
+      const src = String(text ?? '');
+      const frag = document.createDocumentFragment();
+      let last = 0, m;
+      REF_RE.lastIndex = 0;
+      while ((m = REF_RE.exec(src)) !== null) {
+        const target = m[0].indexOf('ضوابط') === 0
+          ? 'ضوابط رقم (' + m[1] + ')'
+          : 'المادة (' + m[1] + ')';
+        if (target === selfArticle || !articleIndex.has(target)) continue;
+        if (m.index > last) frag.append(src.slice(last, m.index));
+        const btn = node('button', 'ref-link', m[0]);
+        btn.type = 'button';
+        btn.title = 'انتقل إلى ' + target;
+        btn.addEventListener('click', () => showArticle(target));
+        frag.append(btn);
+        last = m.index + m[0].length;
+      }
+      if (!last) return null;              // no live reference in this text
+      if (last < src.length) frag.append(src.slice(last));
+      return frag;
+    }
+
+    // jump straight to a unit rather than searching its name, which would
+    // return every clause that merely mentions it
+    function showArticle(target) {
+      const list = articleIndex.get(target);
+      if (!list || !list.length) return;
+      lastQuery = '';
+      conceptAdded = false;
+      conceptJustAdded = false;
+      looseShown = false;
+      results = list.slice();
+      shownResults = results;
+      selectedId = results[0].id;
+      document.getElementById('queryTitle').textContent = '«' + target + '»';
+      document.getElementById('chapters').style.display = 'none';
+      document.getElementById('workspace').classList.add('visible');
+      indexBtn.style.display = 'inline-flex';
+      searchInput.value = '';
+      clearSearchBtn.style.display = 'none';
+      renderResults();
+      document.getElementById('workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     // --- Render Search Results ---
     function renderResults() {
       const list = document.getElementById('resultList');
@@ -2567,7 +2645,14 @@
       quoteHead.append(copyBtn);
 
       const block = node('blockquote', '');
-      block.textContent = '«' + c.officialText + '»';
+      const linked = linkRefs(c.officialText, c.article);
+      if (linked) {
+        block.append('«');
+        block.append(linked);
+        block.append('»');
+      } else {
+        block.textContent = '«' + c.officialText + '»';
+      }
       quote.append(quoteHead, block);
       if (!verbatim) {
         quote.append(node('p', 'summary-note', 'هذه صياغة مختصرة للتيسير، لا تصلح للاستشهاد الرسمي. راجع صورة الصفحة المطبوعة أدناه للنص المعتمد.'));
