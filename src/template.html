@@ -1540,7 +1540,6 @@
             <h3 id="chapterTitle"></h3>
             <div class="pills">
               <span class="pill" id="chapterPrinted"></span>
-              <span class="pill" id="chapterPdf"></span>
             </div>
           </div>
 
@@ -2796,8 +2795,7 @@
       [
         ['المصدر / المادة', c.article],
         ['البند / الفقرة', c.clause || '-'],
-        ['الصفحة المطبوعة', c.printedPage],
-        ['رقم صفحة الـ PDF', c.pdfPage]
+        ['الصفحة المطبوعة', c.printedPage]
       ].forEach(([lbl, val]) => {
         const d = node('div', '');
         d.append(node('small', '', lbl), node('strong', '', String(val)));
@@ -2913,7 +2911,6 @@
 
       const offset = chapterPage - c.pdfPage;
       document.getElementById('chapterPrinted').textContent = 'الصفحة المطبوعة ' + (Number(c.printedPage) + offset);
-      document.getElementById('chapterPdf').textContent = 'صفحة PDF ' + chapterPage;
 
       const total = end - c.pdfPage + 1, pos = offset + 1;
       const pager = document.querySelector('.pager');
