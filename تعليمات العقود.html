@@ -572,6 +572,33 @@
       font-weight: 800;
     }
 
+    /* Search-box usage tip */
+    .search-tip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .search-tip-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-subtle);
+    }
+
+    .pill-tip {
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-weight: 700;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .pill-tip:hover, .pill-tip:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+
     .pager {
       display: flex;
       align-items: center;
@@ -1514,6 +1541,12 @@
           <input class="search-input" id="searchInput" autocomplete="off" placeholder="مثال: سحب العمل، لجان التحليل، التأمينات..." />
           <button class="btn-clear" id="clearSearch" type="button" title="مسح">✕</button>
           <button class="btn-submit" type="submit">بحث فوري</button>
+        </div>
+        <div class="search-tip">
+          <span class="search-tip-label">جرّب:</span>
+          <button class="pill pill-tip" type="button" data-q="الكفاءة المالية">🔎 بعبارة — «الكفاءة المالية»</button>
+          <button class="pill pill-tip" type="button" data-q="المادة 6">📖 بالمادة — «المادة 6»</button>
+          <button class="pill pill-tip" type="button" data-q="ضوابط 4">📑 بالضوابط — «ضوابط 4»</button>
         </div>
       </form>
     </div>
@@ -26604,6 +26637,10 @@
     document.getElementById('searchForm').addEventListener('submit', e => {
       e.preventDefault();
       performSearch(searchInput.value);
+    });
+
+    document.querySelectorAll('.pill-tip').forEach(btn => {
+      btn.addEventListener('click', () => performSearch(btn.dataset.q));
     });
 
     searchInput.addEventListener('input', e => {
