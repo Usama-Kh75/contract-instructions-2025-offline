@@ -2541,6 +2541,24 @@
       return frag;
     }
 
+    // «ضوابط 4» or «المادة 6» typed whole into the search box names the unit
+    // itself, not text to search for. Plain search would token-match the
+    // digit as a substring of every number containing it (4 inside 14, 24…)
+    // and scatter the unit's clauses among unrelated ones — colleagues hit
+    // this looking for ضوابط رقم (4). Anchored to the full query so a
+    // longer sentence that happens to mention a number still searches normally.
+    const DIRECT_ANNEX_RE = /^(?:ال)?ضوابط(?:\s*رقم)?\s*(\d+)$|^(?:ال)?ضابطه\s*(\d+)$/;
+    const DIRECT_ARTICLE_RE = /^(?:ال)?ماده(?:\s*رقم)?\s*(\d+)$/;
+
+    function directJumpTarget(value) {
+      const nq = q(value);
+      let m = DIRECT_ANNEX_RE.exec(nq);
+      if (m) return 'ضوابط رقم (' + (m[1] || m[2]) + ')';
+      m = DIRECT_ARTICLE_RE.exec(nq);
+      if (m) return 'المادة (' + m[1] + ')';
+      return null;
+    }
+
     // jump straight to a unit rather than searching its name, which would
     // return every clause that merely mentions it
     function showArticle(target, focusId) {
@@ -2998,6 +3016,11 @@
       const value = (val || '').trim();
       if (!value) {
         showChapters();
+        return;
+      }
+      const jumpTarget = directJumpTarget(value);
+      if (jumpTarget && articleIndex.has(jumpTarget)) {
+        showArticle(jumpTarget);
         return;
       }
       searchInput.value = value;
