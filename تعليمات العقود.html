@@ -1096,19 +1096,31 @@
       font-weight: 800;
     }
 
-    /* an inline reference reads as part of the sentence, not as a widget */
+    /* colored + underlined like any web link, so it reads as clickable on
+       sight instead of blending into the legal text around it.
+       --mint-text over --primary: the quote's --gold-bg is dark in dark
+       mode, and --primary there (#1d7265) fails contrast against it
+       (2.8:1) while --mint-text (#7ae0ce) clears it (10.3:1) */
     .ref-link {
       background: none;
       border: none;
       padding: 0;
       font: inherit;
-      color: inherit;
+      color: var(--mint-text);
       cursor: pointer;
-      border-bottom: 1px dashed currentColor;
+      border-bottom: 1.5px solid currentColor;
       text-decoration: none;
     }
 
-    .ref-link:hover { background: rgba(217, 164, 65, 0.25); border-radius: 3px; }
+    .ref-link:hover, .ref-link:focus-visible { background: var(--primary-glow); border-radius: 3px; }
+
+    /* shown only above quotes that actually contain a linked reference */
+    .ref-hint {
+      margin: 0 0 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-subtle);
+    }
 
     .via-loose { opacity: 0.6; }
 
@@ -26388,14 +26400,16 @@
 
       const block = node('blockquote', '');
       const linked = linkRefs(c.officialText, c.article);
+      quote.append(quoteHead);
       if (linked) {
+        quote.append(node('p', 'ref-hint', '🔗 العبارات الملوّنة أدناه روابط — انقر عليها للانتقال إلى الإحالة.'));
         block.append('«');
         block.append(linked);
         block.append('»');
       } else {
         block.textContent = '«' + c.officialText + '»';
       }
-      quote.append(quoteHead, block);
+      quote.append(block);
       if (!verbatim) {
         quote.append(node('p', 'summary-note', 'هذه صياغة مختصرة للتيسير، لا تصلح للاستشهاد الرسمي. راجع صورة الصفحة المطبوعة أدناه للنص المعتمد.'));
       }
