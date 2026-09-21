@@ -678,6 +678,38 @@
       backdrop-filter: blur(4px);
     }
 
+    /* floating so it stays in reach whether the reader is at the list or
+       down in the source panel; hidden until a reference has been followed */
+    .nav-back {
+      position: fixed;
+      inset-inline: 0;
+      bottom: 16px;
+      z-index: 900;
+      display: flex;
+      justify-content: center;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+    .nav-back[hidden] { display: none; }
+    .nav-back button {
+      pointer-events: auto;
+      max-width: 100%;
+      padding: 11px 20px;
+      border: none;
+      border-radius: 50px;
+      background: var(--primary);
+      color: #fff;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nav-back button:hover, .nav-back button:focus-visible { filter: brightness(1.12); }
+
     /* Search Results Workspace */
     .workspace {
       display: none;
@@ -1532,11 +1564,11 @@
         <label for="searchInput">اكتب استفسارك أو المصطلح القانوني:</label>
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
-          <input class="search-input" id="searchInput" autocomplete="off" placeholder="مثال: سحب العمل، لجان التحليل، التأمينات..." />
+          <input class="search-input" id="searchInput" autocomplete="off" aria-describedby="searchTip" />
           <button class="btn-clear" id="clearSearch" type="button" title="مسح">✕</button>
           <button class="btn-submit" type="submit">بحث فوري</button>
         </div>
-        <p class="search-tip">💡 ابحث بأي كلمة أو عبارة من التعليمات، أو اكتب «المادة» أو «ضوابط» ورقمها للانتقال إليها مباشرة.</p>
+        <p class="search-tip" id="searchTip">💡 ابحث بأي كلمة أو عبارة من التعليمات، أو اكتب «المادة» أو «ضوابط» ورقمها للانتقال إليها مباشرة.</p>
       </form>
     </div>
   </section>
@@ -1599,6 +1631,11 @@
     </section>
 
   </main>
+
+  <!-- the way back after following a cross-reference -->
+  <div class="nav-back" id="navBack" hidden>
+    <button type="button" id="navBackBtn"></button>
+  </div>
 
   <!-- Lightbox Modal for Zooming Scanned Pages -->
   <div class="lightbox-modal" id="lightboxModal">
@@ -25764,12 +25801,15 @@
       const had = lightboxHistory;
       lightboxHistory = false;
       if (had && fromPop !== true) {
-        try { history.back(); } catch (e) { }
+        // this Back is ours; the trail must not treat it as the reader's
+        suppressPop++;
+        try { history.back(); } catch (e) { suppressPop--; }
       }
     }
 
-    window.addEventListener('popstate', () => {
-      if (lightbox.classList.contains('active')) closeLightbox(true);
+    window.addEventListener('popstate', e => {
+      if (lightbox.classList.contains('active')) { closeLightbox(true); return; }
+      onTrailPop(e);
     });
 
     document.getElementById('lightboxCloseBtn').addEventListener('click', () => closeLightbox());
@@ -26112,6 +26152,82 @@
       return null;
     }
 
+    // --- The way back after following a cross-reference ---
+    // Each followed reference saves the view it left, so a reader can read the
+    // referenced text and return to exactly where they were, one hop at a time.
+    // The same trail is mirrored in the browser history, so the phone's Back
+    // gesture retraces it instead of leaving the app.
+    const navStack = [];
+    let navDepth = 0;       // history entries of ours currently in the session history
+    let suppressPop = 0;    // popstates we caused ourselves and must not act on
+    const navBack = document.getElementById('navBack');
+    const navBackBtn = document.getElementById('navBackBtn');
+
+    function currentClause() {
+      return shownResults.find(c => c.id === selectedId) || results.find(c => c.id === selectedId) || null;
+    }
+
+    function pushTrail() {
+      const from = currentClause();
+      navStack.push({
+        results, shownResults, selectedId, jumpUnit, lastQuery,
+        conceptAdded, conceptJustAdded, looseShown,
+        title: document.getElementById('queryTitle').textContent,
+        searchValue: searchInput.value,
+        scrollY: window.scrollY,
+        label: from ? from.article + ' / ' + from.clause : 'الموضع السابق'
+      });
+      try { history.pushState({ nav: navStack.length }, ''); navDepth = navStack.length; } catch (e) { }
+      syncTrail();
+    }
+
+    function syncTrail() {
+      const top = navStack[navStack.length - 1];
+      navBack.hidden = !top;
+      if (top) navBackBtn.textContent = '↩ العودة إلى ' + top.label;
+    }
+
+    function restoreTrail(snap) {
+      ({ results, shownResults, selectedId, jumpUnit, lastQuery,
+         conceptAdded, conceptJustAdded, looseShown } = snap);
+      document.getElementById('queryTitle').textContent = snap.title;
+      searchInput.value = snap.searchValue;
+      clearSearchBtn.style.display = snap.searchValue ? 'block' : 'none';
+      syncTrail();
+      renderResults();
+      window.scrollTo({ top: snap.scrollY });
+    }
+
+    // a fresh search or the index starts a new trail
+    function clearTrail() {
+      navStack.length = 0;
+      syncTrail();
+      if (navDepth > 0) {
+        suppressPop++;
+        const n = navDepth;
+        navDepth = 0;
+        try { history.go(-n); } catch (e) { suppressPop--; }
+      }
+    }
+
+    navBackBtn.addEventListener('click', () => {
+      if (!navStack.length) return;
+      if (navDepth > 0) { history.back(); return; }   // popstate does the restoring
+      restoreTrail(navStack.pop());
+    });
+
+    function onTrailPop(e) {
+      if (suppressPop > 0) { suppressPop--; return; }
+      const depth = (e.state && e.state.nav) || 0;
+      navDepth = depth;
+      // Forward lands on an entry deeper than the trail we hold; there is
+      // nothing to rebuild it from, so leave the view alone
+      if (depth >= navStack.length) return;
+      let snap = null;
+      while (navStack.length > depth) snap = navStack.pop();
+      if (snap) restoreTrail(snap);
+    }
+
     function linkRefs(text, selfArticle) {
       const src = String(text ?? '');
       const frag = document.createDocumentFragment();
@@ -26136,7 +26252,7 @@
         btn.title = clause
           ? 'انتقل إلى ' + article + ' / ' + clause.clause
           : 'انتقل إلى ' + article;
-        btn.addEventListener('click', () => showArticle(article, clause && clause.id));
+        btn.addEventListener('click', () => { pushTrail(); showArticle(article, clause && clause.id); });
         frag.append(btn);
         last = m.index + m[0].length;
         made++;
@@ -26603,6 +26719,7 @@
     const clearSearchBtn = document.getElementById('clearSearch');
 
     function showChapters() {
+      clearTrail();
       results = [];
       // leaving these behind lets a later click resolve an id against the
       // previous query's list and open an unrelated clause
@@ -26619,6 +26736,7 @@
 
     function performSearch(val) {
       const value = (val || '').trim();
+      clearTrail();
       if (!value) {
         showChapters();
         return;
