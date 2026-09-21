@@ -12,7 +12,11 @@ const SHELL_FILES = [
   './',
   './index.html',
   './manifest.json',
-  './app-icon.jpg'
+  './app-icon.jpg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './apple-touch-icon.png'
 ];
 
 // addAll هي عملية كلّية: يُسقط فشلُ ملفٍ واحد التخزينَ كلَّه فلا يُحفظ شيء.

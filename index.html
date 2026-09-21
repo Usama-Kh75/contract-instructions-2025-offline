@@ -9,10 +9,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0f4c42">
-  <link rel="apple-touch-icon" href="app-icon.jpg">
-  <link rel="icon" href="app-icon.jpg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="تعليمات العقود 2025">
   <link rel="manifest" href="manifest.json">
   <meta name="author" content="م. أسامة خليل هاشم">
@@ -680,6 +680,42 @@
 
     /* floating so it stays in reach whether the reader is at the list or
        down in the source panel; hidden until a reference has been followed */
+    .install-card {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #fff;
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+    .install-body p { margin-top: 2px; opacity: 0.92; }
+    .install-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .install-go {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 50px;
+      background: #f3f1e8;
+      color: #0f4c42;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .install-dismiss {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 1rem;
+      opacity: 0.75;
+      cursor: pointer;
+      padding: 4px 6px;
+    }
+
     .nav-back {
       position: fixed;
       inset-inline: 0;
@@ -1570,6 +1606,19 @@
         </div>
         <p class="search-tip" id="searchTip">💡 ابحث بأي كلمة أو عبارة من التعليمات، أو اكتب «المادة» أو «ضوابط» ورقمها للانتقال إليها مباشرة.</p>
       </form>
+
+      <!-- shown only where the app can actually be installed (web copy, not
+           already installed); see the install block in the script -->
+      <div class="install-card" id="installCard" hidden>
+        <div class="install-body">
+          <strong>📲 ثبّته كتطبيق على هاتفك</strong>
+          <p id="installText"></p>
+        </div>
+        <div class="install-actions">
+          <button type="button" class="install-go" id="installGo" hidden>تثبيت</button>
+          <button type="button" class="install-dismiss" id="installDismiss" aria-label="إخفاء">✕</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -25869,6 +25918,64 @@
       // phrase match is the dilution this split exists to undo.
       return x.title.includes(nq) || x.keywords.includes(nq) ||
              x.official.includes(nq) || x.explain.includes(nq);
+    }
+
+    // --- Install as an app (web copy only) ---
+    // Chrome/Edge on Android offer the install through a captured event; iOS
+    // has no such event at all - the only route is Share > Add to Home Screen,
+    // which nobody finds unprompted. So say where it is, once, and let the
+    // reader dismiss it for good.
+    {
+      const card = document.getElementById('installCard');
+      const text = document.getElementById('installText');
+      const go = document.getElementById('installGo');
+      const KEY = 'installHintDismissed';
+      const web = location.protocol === 'https:' || location.protocol === 'http:';
+      const installed = window.navigator.standalone === true ||
+        (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isPhone = isIOS || /android/i.test(navigator.userAgent);
+      let dismissed = false;
+      try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { }
+
+      let deferred = null;
+      let closed = false;   // dismissed or installed: nothing may reopen the card
+      const show = msg => { if (closed) return; text.textContent = msg; card.hidden = false; };
+
+      if (web && isPhone && !installed && !dismissed) {
+        if (isIOS) {
+          show('اضغط زر المشاركة (المربع والسهم ⬆) في متصفحك، ثم اختر «إضافة إلى الشاشة الرئيسية». يعمل بعدها كتطبيق وبلا إنترنت.');
+        }
+        window.addEventListener('beforeinstallprompt', e => {
+          e.preventDefault();
+          deferred = e;
+          go.hidden = false;
+          show('يعمل كتطبيق مستقل وبلا إنترنت.');
+        });
+        // the event may never fire (already installed, or the browser holds it
+        // back); don't leave Android readers with nothing at all
+        if (!isIOS) {
+          setTimeout(() => {
+            if (card.hidden && !installed) show('من قائمة المتصفح (⋮) اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».');
+          }, 4000);
+        }
+      }
+      go.addEventListener('click', async () => {
+        if (!deferred) return;
+        const ev = deferred;
+        deferred = null;   // the event is single-use
+        go.disabled = true;
+        try { ev.prompt(); await ev.userChoice; } catch (e) { }
+        closed = true;
+        card.hidden = true;
+      });
+      document.getElementById('installDismiss').addEventListener('click', () => {
+        closed = true;
+        card.hidden = true;
+        try { localStorage.setItem(KEY, '1'); } catch (e) { }
+      });
+      window.addEventListener('appinstalled', () => { closed = true; card.hidden = true; });
     }
 
     // --- Offline (web copy only) ---

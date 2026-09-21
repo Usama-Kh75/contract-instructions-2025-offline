@@ -1,21 +1,34 @@
 {
+  "id": "./",
   "name": "تعليمات تنفيذ العقود الحكومية لعام 2025",
   "short_name": "تعليمات العقود",
+  "description": "مرجع تفاعلي لتعليمات تنفيذ العقود العامة العراقية رقم (1) لسنة 2025، يعمل بلا إنترنت.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f3f1e8",
-  "theme_color": "#123f3b",
+  "lang": "ar",
+  "dir": "rtl",
+  "background_color": "#123f3c",
+  "theme_color": "#0f4c42",
   "icons": [
     {
-      "src": "./app-icon.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ],
-  "scope": "./",
-  "description": "مرجع تفاعلي لتعليمات تنفيذ العقود العامة العراقية رقم (1) لسنة 2025، يعمل بلا إنترنت.",
-  "lang": "ar",
-  "dir": "rtl"
+  ]
 }
