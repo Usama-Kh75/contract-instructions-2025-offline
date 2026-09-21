@@ -716,6 +716,20 @@
       padding: 4px 6px;
     }
 
+    .back-inline {
+      margin-top: 10px;
+      padding: 8px 16px;
+      border: 1.5px solid var(--mint-text);
+      border-radius: 50px;
+      background: var(--mint);
+      color: var(--mint-text);
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .back-inline:hover, .back-inline:focus-visible { background: var(--primary-glow); }
+
     .nav-back {
       position: fixed;
       inset-inline: 0;
@@ -1670,6 +1684,7 @@
           <div>
             <span class="kicker">نتائج البحث القانوني</span>
             <h2 id="queryTitle"></h2>
+            <button type="button" class="back-inline" id="navBackInline" hidden></button>
           </div>
           <span class="count" id="resultCount"></span>
         </div>
@@ -2685,6 +2700,7 @@
     let suppressPop = 0;    // popstates we caused ourselves and must not act on
     const navBack = document.getElementById('navBack');
     const navBackBtn = document.getElementById('navBackBtn');
+    const navBackInline = document.getElementById('navBackInline');
 
     function currentClause() {
       return shownResults.find(c => c.id === selectedId) || results.find(c => c.id === selectedId) || null;
@@ -2707,7 +2723,11 @@
     function syncTrail() {
       const top = navStack[navStack.length - 1];
       navBack.hidden = !top;
-      if (top) navBackBtn.textContent = '↩ العودة إلى ' + top.label;
+      navBackInline.hidden = !top;
+      if (top) {
+        navBackBtn.textContent = '↩ العودة إلى ' + top.label;
+        navBackInline.textContent = '↩ العودة إلى ' + top.label;
+      }
     }
 
     function restoreTrail(snap) {
@@ -2733,11 +2753,13 @@
       }
     }
 
-    navBackBtn.addEventListener('click', () => {
+    function goBackTrail() {
       if (!navStack.length) return;
       if (navDepth > 0) { history.back(); return; }   // popstate does the restoring
       restoreTrail(navStack.pop());
-    });
+    }
+    navBackBtn.addEventListener('click', goBackTrail);
+    navBackInline.addEventListener('click', goBackTrail);
 
     function onTrailPop(e) {
       if (suppressPop > 0) { suppressPop--; return; }
