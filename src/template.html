@@ -1039,6 +1039,8 @@
       color: #ffffff;
     }
 
+    a.btn-copy { text-decoration: none; }
+
     .quote blockquote {
       margin: 0;
       font-family: 'Cairo', 'Traditional Arabic', Tahoma, sans-serif;
@@ -1743,6 +1745,9 @@
           <span class="offline-status" id="offlineStatus"></span>
           <span class="offline-state" id="offlineState"></span>
         </span>
+        <a class="btn-copy btn-quiet" id="downloadCopyLink"
+           href="https://raw.githubusercontent.com/Usama-Kh75/contract-instructions-2025-offline/main/index.html"
+           download="تعليمات العقود.html" hidden>⬇ نزّل نسخة الملف إلى حاسوبك</a>
       </div>
     </div>
   </footer>
@@ -2530,6 +2535,13 @@
           navigator.serviceWorker.ready.then(() => renderOfflineStatus(state)).catch(() => { });
         }
       }
+    }
+
+    // a plain file download for anyone who wants their own local copy
+    // rather than (or alongside) the browser-cached offline mode above
+    {
+      const dl = document.getElementById('downloadCopyLink');
+      if (dl && isWebCopy) dl.hidden = false;
     }
 
     // --- Concept Layer ---
