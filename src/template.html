@@ -605,7 +605,7 @@
       display: flex;
       flex-direction: column;
       gap: 2px;
-      max-height: 400px;
+      max-height: 480px;
       overflow-y: auto;
       padding-inline-end: 4px;
     }
@@ -653,6 +653,35 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
+    .pi-item[aria-expanded="true"] {
+      background: var(--mint);
+      border-color: var(--mint-border);
+    }
+    .pi-item[aria-expanded="true"] .pi-title { -webkit-line-clamp: unset; }
+
+    .pi-body {
+      margin: 4px 0 10px;
+      padding: 12px 14px;
+      border-inline-start: 3px solid var(--gold-border);
+      border-radius: var(--radius-sm);
+      background: var(--gold-bg);
+    }
+    .pi-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--gold-text);
+      font-size: 0.74rem;
+      font-weight: 900;
+    }
+    .pi-text, .pi-explain {
+      margin: 0 0 10px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      line-height: 1.85;
+    }
+    .pi-text { font-weight: 700; }
+    .pi-explain { margin-bottom: 0; }
+
     .pi-note {
       color: var(--text-muted);
       font-size: 0.8rem;
@@ -3498,8 +3527,7 @@
 
     // jump straight to a unit rather than searching its name, which would
     // return every clause that merely mentions it
-    // fromPage: the printed page whose «في هذه الصفحة» list opened it
-    function showArticle(target, focusId, fromPage) {
+    function showArticle(target, focusId) {
       const list = articleIndex.get(target);
       if (!list || !list.length) return;
       lastQuery = '';
@@ -3512,7 +3540,7 @@
       results = focused ? [focused] : list.slice();
       shownResults = results;
       selectedId = results[0].id;
-      jumpUnit = { article: target, focused: !!focused, size: list.length, fromPage: focused ? fromPage || null : null };
+      jumpUnit = { article: target, focused: !!focused, size: list.length };
       document.getElementById('queryTitle').textContent =
         '«' + target + (focused ? ' / ' + focused.clause : '') + '»';
       document.getElementById('chapters').style.display = 'none';
@@ -3529,7 +3557,7 @@
       const list = document.getElementById('resultList');
       list.replaceChildren();
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? (jumpUnit.fromPage ? 'بندٌ من الصفحة المطبوعة ' + jumpUnit.fromPage : 'بندٌ محال إليه') :jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : countAr(results.length, 'نتيجة');
 
       // computed BEFORE the empty state, deliberately: a bridge term like
@@ -3632,21 +3660,8 @@
 
       if (jumpUnit && jumpUnit.focused) {
         const bar = node('div', 'concept-bar');
-        const fromPage = jumpUnit.fromPage;
-        bar.append(node('p', '', (fromPage
-          ? 'فتحتَ هذا البند من فهرس الصفحة المطبوعة ' + fromPage + '. وهو أحد بنود '
-          : 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود ')
+        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود '
           + jumpUnit.article + ' (' + countAr(jumpUnit.size, 'بند') + ').'));
-        if (fromPage) {
-          // the page the reader came from is kept as it was; this returns to it
-          const back = node('button', 'btn-copy', '↩ العودة إلى الصفحة ' + fromPage);
-          back.type = 'button';
-          back.addEventListener('click', () => {
-            showChapters();
-            document.getElementById('chapters').scrollIntoView({ behavior: 'smooth', block: 'start' });
-          });
-          bar.append(back);
-        }
         const all = node('button', 'btn-copy btn-quiet', 'اعرض ' + jumpUnit.article + ' كاملةً');
         all.type = 'button';
         const target = jumpUnit.article;
@@ -3694,7 +3709,7 @@
       if (loose.length) parts.push(countAr(loose.length, 'نتيجة') + ' بكلمات متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
       if (added) parts.push(countAr(added, 'نتيجة') + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? (jumpUnit.fromPage ? 'بندٌ من الصفحة المطبوعة ' + jumpUnit.fromPage : 'بندٌ محال إليه') :jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
@@ -3874,7 +3889,7 @@
       // the position in the whole document read as a second «X من Y» beside
       // the first; the printed page above is the reference readers cite
       document.getElementById('pageCount').textContent = 'صفحة ' + pos + ' من ' + total;
-      renderPageIndex(chapterPage, Number(c.printedPage) + offset);
+      renderPageIndex(chapterPage);
       document.getElementById('prevPage').disabled = chapterPage <= DOC_FIRST;
       document.getElementById('nextPage').disabled = chapterPage >= DOC_LAST;
 
@@ -3930,19 +3945,41 @@
     if (phoneLayout.addEventListener) phoneLayout.addEventListener('change', syncPageIndexMode);
     pageIndexTitle.addEventListener('click', e => { if (!phoneLayout.matches) e.preventDefault(); });
 
-    function renderPageIndex(pdfPage, printed) {
+    function renderPageIndex(pdfPage) {
       // rebuilt only when the page changes: rebuilding replays the wave
       if (pageIndexShown === pdfPage) return;
       pageIndexShown = pdfPage;
       pageIndexList.replaceChildren();
       let i = 0;
       const add = el => { el.style.setProperty('--i', i++); pageIndexList.append(el); };
+      // A clause chosen here opens in place, beside its own page. It used to
+      // jump to the search screen, but whoever picks a clause from the page
+      // already knows where it is; search is for words whose place they don't.
       const item = c => {
+        const entry = node('div', 'pi-entry');
         const b = node('button', 'pi-item');
         b.type = 'button';
+        b.setAttribute('aria-expanded', 'false');
         b.append(node('span', 'pi-num', c.clause), node('span', 'pi-title', c.title));
-        b.addEventListener('click', () => showArticle(c.article, c.id, printed));
-        return b;
+        const body = node('div', 'pi-body');
+        body.hidden = true;
+        body.append(
+          node('span', 'pi-label', c.verbatim === false ? 'صياغة مختصرة للتيسير' : 'النص الحرفي'),
+          node('p', 'pi-text', c.officialText));
+        if (c.explanation) body.append(node('span', 'pi-label', 'التفسير المبسط'), node('p', 'pi-explain', c.explanation));
+        b.addEventListener('click', () => {
+          const open = b.getAttribute('aria-expanded') !== 'true';
+          // one at a time, so the list stays a list
+          pageIndexList.querySelectorAll('.pi-item[aria-expanded="true"]').forEach(x => {
+            x.setAttribute('aria-expanded', 'false');
+            x.nextElementSibling.hidden = true;
+          });
+          b.setAttribute('aria-expanded', String(open));
+          body.hidden = !open;
+          if (open) entry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        });
+        entry.append(b, body);
+        return entry;
       };
       const here = clausesByPage.get(pdfPage) || [];
       if (!here.length) {
