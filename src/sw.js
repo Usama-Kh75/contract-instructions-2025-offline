@@ -46,11 +46,31 @@ self.addEventListener('activate', e => {
   );
 });
 
+const FONTS = 'fonts-v1';           // خطوط Google، لا تتغير لنفس الرابط
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+
+  // الخطوط: من المخزن أولاً، فلا ينتظر العرضُ Google عند كل فتح، وتبقى
+  // الخطوط نفسها بلا إنترنت بدل خط النظام
+  if (FONT_HOSTS.includes(url.hostname)) {
+    e.respondWith(
+      caches.open(FONTS).then(c =>
+        c.match(req).then(hit => hit || fetch(req).then(res => {
+          if (res.ok || res.type === 'opaque') c.put(req, res.clone());
+          return res;
+        }))
+      )
+    );
+    return;
+  }
+
   if (url.origin !== location.origin) return;
+  // الصفحة تقرأ sw.js لتعرف إصدار العامل الجديد؛ يجب أن يأتي من الشبكة دائماً
+  if (url.pathname.endsWith('/sw.js')) return;
 
   // صور الصفحات: من المخزن أولاً — فهي لا تتغير أبداً، وجلبها مرة يكفي
   if (/\/pages\/page-\d+\.jpg$/.test(url.pathname)) {
@@ -65,13 +85,25 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // الهيكل: من الشبكة أولاً حتى يصل التحديث، ومن المخزن إن انقطعت
-  e.respondWith(
-    fetch(req)
-      .then(res => {
-        if (res.ok) caches.open(SHELL).then(c => c.put(req, res.clone()));
-        return res;
-      })
-      .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
-  );
+  // الهيكل: من المخزن فوراً، ويُجلب الجديد في الخلفية لفتحةٍ لاحقة.
+  // كان من الشبكة أولاً، فكان كل فتحٍ ينتظر تنزيل الصفحة كاملة (1.5 م.ب)
+  // على اتصال ضعيف مع أنها محفوظة. الإصدار الجديد يُعلَن عنه في الصفحة
+  // حين يتبدّل العامل، فلا يبقى القارئ على نسخة قديمة دون علمه.
+  e.respondWith((async () => {
+    const cached = await caches.match(req) ||
+      (req.mode === 'navigate' ? await caches.match('./index.html') : undefined);
+    const fresh = fetch(req).then(async res => {
+      if (res.ok) {
+        const copy = res.clone();
+        const c = await caches.open(SHELL);
+        await c.put(req, copy);
+      }
+      return res;
+    });
+    if (cached) {
+      e.waitUntil(fresh.catch(() => { }));
+      return cached;
+    }
+    return fresh.catch(() => caches.match('./index.html'));
+  })());
 });
