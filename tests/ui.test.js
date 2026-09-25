@@ -153,6 +153,71 @@ async function run(dev, browser) {
   await sleep(500);
   check('«قائمة الفصول» يعيد إلى الفصول', await pg.$eval('#chapters', e => getComputedStyle(e).display) === 'block');
 
+  // «أُحيل إليه من»: المادة (40) تستند إليها ديباجات الضوابط
+  const art40 = await pg.evaluate(() => {
+    const c = data.clauses.find(x => x.article === 'المادة (40)');
+    const box = backrefsBox(c, () => {});
+    return box ? { links: box.querySelectorAll('.pi-link').length, shown: [...box.querySelectorAll('.pi-link')].filter(a => !a.hidden).length, more: (box.querySelector('.pi-others') || {}).textContent } : null;
+  });
+  const showN = dev.phone ? 3 : 6;
+  check('المادة (40): «أُحيل إليه من» 17 ضابطة، ' + showN + ' ظاهرة والباقي بزر',
+    !!art40 && art40.links === 17 && art40.shown === showN && new RegExp(String(17 - showN)).test(art40.more || ''), art40);
+
+  // حلّ الإحالات: الحالات التي كانت خاطئة أو غير مربوطة
+  const refs = await pg.evaluate(() => {
+    const at = (article, clause, text) => {
+      const c = data.clauses.find(x => x.article === article && x.clause === clause);
+      const src = String(c.officialText);
+      REF_RE.lastIndex = 0;
+      let m;
+      while ((m = REF_RE.exec(src)) !== null) {
+        if (m[0].includes(text)) {
+          const r = resolveRef(m, src, c.article, c.clause);
+          return r ? r.article + (r.group ? ' / «' + r.group + '» كله' : r.clause ? ' / ' + r.clause.clause : '') : 'لا رابط';
+        }
+      }
+      return 'لم يُعثر على الإحالة';
+    };
+    return {
+      otherRegs: at('ضوابط رقم (6)', 'المادة (2) / ثانياً', 'المادة (8)'),
+      ownArticle: at('ضوابط رقم (8)', 'المادة (8) / 1', 'المادة (1)'),
+      wholeClause: at('ضوابط رقم (2)', 'ثالثاً / 6', 'رابعاً'),
+      letter: at('المادة (27)', 'ثانياً / أ', '(ط)'),
+      sibling: at('المادة (8)', 'أولاً / ب', 'هذا البند'),
+      inBracket: at('المادة (37)', 'ثالثاً', '35')
+    };
+  });
+  check('إحالة إلى ضوابط أخرى ليست رابطاً', refs.otherRegs === 'لا رابط', refs.otherRegs);
+  check('«المادة (1) من هذه الضوابط» مادة الضابطة نفسها', refs.ownArticle === 'ضوابط رقم (8) / المادة (1)', refs.ownArticle);
+  check('«البند (رابعاً)» يعني رابعاً كله لا فرعه الأول', refs.wholeClause === 'ضوابط رقم (2) / «رابعاً» كله', refs.wholeClause);
+  check('«الفقرة (ط) من البند (ثانيا)» تصل إلى ثانياً / ط', refs.letter === 'المادة (16) / ثانياً / ط', refs.letter);
+  check('«(أ) من هذا البند» فرعٌ شقيق', refs.sibling === 'المادة (8) / أولاً / أ', refs.sibling);
+  check('«(35/ ثالثاً/أ) من هذه التعليمات»', refs.inBracket === 'المادة (35) / ثالثاً / أ', refs.inBracket);
+  // من البند المحال إليه إلى البند الذي أحال، تصفّحاً
+  const hop = await pg.evaluate(() => {
+    // ضوابط (14) تحيل إلى «الفقرة (ثانياً/ ز)» تحديداً
+    const target = data.clauses.find(x => x.article === 'المادة (16)' && x.clause === 'ثانياً / ز');
+    openClauseAt(target);
+    const link = [...document.querySelectorAll('.pi-body:not([hidden]) .pi-back .pi-link')].find(a => a.textContent.startsWith('ضوابط رقم (14)'));
+    if (!link) return null;
+    link.click();
+    return { chapters: getComputedStyle(document.getElementById('chapters')).display,
+             open: (document.querySelector('.pi-item[aria-expanded=true] .pi-num') || {}).textContent,
+             kind: selectedKind };
+  });
+  check('من المادة (16) إلى ضوابط (14) التي أحالت إليها', !!hop && hop.kind === 'annex' && hop.chapters === 'block' && !!hop.open, hop);
+  // وفي شاشة البحث عبر مسار الإحالات، مع طريق العودة
+  const viaSearch = await pg.evaluate(() => {
+    showArticle('المادة (28)');
+    const box = document.querySelector('.source-back');
+    const link = box && box.querySelector('.pi-link');
+    if (!link) return null;
+    link.click();
+    return { back: !document.getElementById('navBack').hidden, title: document.getElementById('queryTitle').textContent };
+  });
+  check('في البحث: «أُحيل إليه من» يفتح الضابطة مع زر العودة', !!viaSearch && viaSearch.back && /ضوابط رقم/.test(viaSearch.title), viaSearch);
+  await pg.evaluate(() => showChapters());
+
   // رابط البند: الإرسال
   const shared = await pg.evaluate(() => {
     const c = data.clauses.find(x => x.article === 'المادة (27)' && x.clause === 'أولاً / أ');

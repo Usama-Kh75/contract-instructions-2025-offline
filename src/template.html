@@ -697,10 +697,12 @@
       font-weight: 900;
       margin-top: 4px;
     }
+    /* not a pill: a pill that wraps to three lines on a phone is a lump */
     .pi-link {
-      padding: 4px 10px;
+      padding: 5px 10px;
       border: 1px solid var(--mint-border);
-      border-radius: 50px;
+      border-radius: 10px;
+      line-height: 1.6;
       background: var(--card-bg);
       color: var(--mint-text);
       font: inherit;
@@ -710,7 +712,34 @@
       cursor: pointer;
     }
     .pi-link:hover, .pi-link:focus-visible { background: var(--mint); }
-    .pi-share { margin-top: 2px; }
+    .pi-share {
+      display: inline-flex;
+      margin: 0 0 10px;
+      padding: 5px 12px;
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius-sm);
+      background: var(--card-bg);
+      color: var(--gold-text);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .pi-share:hover, .pi-share:focus-visible { background: var(--gold-bg); }
+    /* the citing clauses in their own tint, so «أُحيل إليه من» is told
+       apart from the branch links above it at a glance */
+    .pi-back { border-top-color: var(--mint-border); }
+    .pi-back .pi-more-head { color: var(--mint-text); }
+    .pi-back .pi-link { background: var(--mint); }
+    .pi-back .pi-link:hover, .pi-back .pi-link:focus-visible { background: var(--card-bg); }
+    .pi-link[hidden] { display: none; }
+    .source-back {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--mint-border);
+      border-radius: var(--radius-md);
+      background: var(--mint);
+    }
     .quote-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 
     .pi-fold { margin: 2px 0 8px; }
@@ -718,9 +747,10 @@
       width: 100%;
       text-align: right;
       padding: 7px 10px;
-      border: 1px dashed var(--card-border);
+      /* solid: a dashed outline reads as a drop zone or a disabled slot */
+      border: 1px solid var(--card-border);
       border-radius: var(--radius-sm);
-      background: transparent;
+      background: var(--bg-body);
       color: var(--text-muted);
       font: inherit;
       font-size: 0.78rem;
@@ -3439,28 +3469,195 @@
     // written as a literal, not assembled from strings: the first version was
     // built by concatenation and every backslash was eaten on the way in, so
     // \s became a plain letter s and the pattern matched nothing at all
-    const REF_RE = /(?:(?:البند|الفقرة|الفقرات)\s*)?\(([^()]{1,40})\)\s*من\s*(?:(?:البند|الفقرة)\s*\([^()]{1,40}\)\s*من\s*)?(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)|\(([^()]{1,40})\)\s*من\s*(?:هذه|هذا)\s*(?:المادة|الماده|البند|الفقرة|الضوابط|التعليمات)|(?:المادة|الماده|ضوابط رقم)\s*\((\d+)\)/g;
+    // Groups: 1 the first bracket, 2 a middle «البند (X) من», 3 the number;
+    // 4 a leading «(ا) من البند» and 5 the bracket, before «من هذه…»;
+    // 6 the number of a bare «المادة (N)». The middle and leading brackets
+    // name the clause, so «الفقرة (ط) من البند (ثانيا) من المادة (16)»
+    // reaches ثانياً / ط instead of stopping at the whole article.
+    const REF_RE = /(?:(?:البند|الفقرة|الفقرات|الفقرتين)\s*)?\(([^()]{1,40})\)\s*من\s*(?:(?:البند|الفقرة)\s*\(([^()]{1,40})\)\s*من\s*)?(?:المادة|الماده|ضوابط رقم)\s*\(([0-9٠-٩]+)\)|(?:\(([^()]{1,10})\)\s*من\s*(?:البند|الفقرة)\s*)?\(([^()]{1,40})\)\s*من\s*(?:هذه|هذا)\s*(?:المادة|الماده|البند|الفقرة|الضوابط|التعليمات)|(?:المادة|الماده|ضوابط رقم)\s*\(([0-9٠-٩]+)\)/g;
 
     const ORD_RE = /^(?:اولا|ثانيا|ثالثا|رابعا|خامسا|سادسا|سابعا|ثامنا|تاسعا|عاشرا|حادي عشر|ثاني عشر|ثالث عشر|رابع عشر|خامس عشر)$/;
 
-    // «رابعا /أ، ب، ج» and «ثانيا"» both name the clause رابعاً / ثانياً;
-    // take the leading ordinal or letter and ignore the rest
-    function clauseTarget(article, inside) {
+    // the print writes «سادسا"» with a quote standing in for the ending, and
+    // «( ثانيا")» with stray spaces - strip anything that is not a letter,
+    // digit or space before matching
+    const cleanHead = s => normClause(s).replace(/[^\p{L}\p{N} ]+/gu, '').replace(/\s+/g, ' ').trim();
+    const segsOf = label => normClause(label).split('/').map(cleanHead);
+    // a clause belongs to «رابعاً» if it is رابعاً itself or one of its branches
+    const inGroup = (c, g) => c.clause === g || String(c.clause).startsWith(g + ' / ');
+
+    // Returns { clause, group }. group is set when the text names a clause
+    // that has no entry of its own - «البند (رابعاً)» where only رابعاً / 1 / أ
+    // and its siblings exist. Pointing that at its first branch read as a
+    // reference to the investment-budget case when the text meant all of
+    // رابعاً; the group says «all of رابعاً», with the first branch only as
+    // the place to land. letterText narrows to a lettered branch (ثانياً / ط).
+    function clauseTarget(article, inside, letterText) {
       const list = articleIndex.get(article);
       if (!list || !inside) return null;
-      // the print writes «سادسا"» with a quote standing in for the ending,
-      // and «( ثانيا")» with stray spaces - strip anything that is not a
-      // letter, digit or space before matching
-      const head = normClause(inside).split(/[\/،,]/)[0]
-        .replace(/[^\p{L}\p{N} ]+/gu, '').replace(/\s+/g, ' ').trim();
+      const head = cleanHead(String(inside).split(/[\/،,]/)[0]);
       if (!head) return null;
       // a bare letter like (أ) names a sub-clause, not a top-level one
       if (!ORD_RE.test(head) && head.length > 2) return null;
-      for (const c of list) {
-        const seg = normClause(c.clause).split('/')[0].trim();
-        if (seg === head) return c;
+      const inHead = list.filter(c => segsOf(c.clause)[0] === head);
+      if (!inHead.length) return null;
+      const prefix = (c, n) => String(c.clause).split(' / ').slice(0, n).join(' / ').trim();
+
+      // one letter, not a list («أ، ب، ج» names several and falls back)
+      let letter = null;
+      if (letterText && !/[،,]/.test(letterText)) {
+        const l = cleanHead(letterText);
+        if (l && l.length <= 2 && !ORD_RE.test(l)) letter = l;
       }
-      return null;
+      if (letter) {
+        const exactSub = inHead.find(c => { const s = segsOf(c.clause); return s.length === 2 && s[1] === letter; });
+        if (exactSub) return { clause: exactSub, group: null };
+        const deeper = inHead.find(c => segsOf(c.clause)[1] === letter);
+        if (deeper) return { clause: deeper, group: prefix(deeper, 2) };
+      }
+      const exact = inHead.find(c => segsOf(c.clause).length === 1);
+      if (exact) return { clause: exact, group: null };
+      return { clause: inHead[0], group: prefix(inHead[0], 1) };
+    }
+
+    // One resolution for every reference: the links inside the text and the
+    // «أُحيل إليه من» lists must agree on where a reference points.
+    // Returns { article, clause, group } or null when it is not a link.
+    function resolveRef(m, src, selfArticle, selfClause) {
+      const annexWord = m[0].indexOf('ضوابط') >= 0;
+      // «المادة (٣١)» is written in Arabic-Indic digits once in the print
+      const num = (m[3] || m[6] || '').replace(/[٠-٩]/g, d => d.charCodeAt(0) - 0x0660) || undefined;
+
+      if (m[5] !== undefined && !m[4]) {
+        // «(35/ ثالثاً/أ) من هذه التعليمات», «(٣١) من هذه التعليمات»: the
+        // bracket itself names an article of the instructions
+        if (/التعليمات$/.test(m[0])) {
+          const parts = String(m[5]).split('/');
+          const n = cleanHead(parts[0]);
+          if (/^\d+$/.test(n)) {
+            const art = 'المادة (' + n + ')';
+            if (!articleIndex.has(art)) return null;
+            const t = parts[1] ? clauseTarget(art, parts[1], parts[2] || null) : null;
+            return { article: art, clause: t ? t.clause : null, group: t ? t.group : null };
+          }
+        }
+        // «(أ) من هذا البند», «(٢) من هذه الفقرة»: a sibling of the clause
+        // the reference is written in
+        if (/(?:البند|الفقرة)$/.test(m[0]) && selfClause) {
+          const x = cleanHead(m[5]);
+          const parent = segsOf(selfClause).slice(0, -1);
+          if (x && x.length <= 2 && !ORD_RE.test(x) && parent.length) {
+            const want = parent.concat(x).join('/');
+            const sib = (articleIndex.get(selfArticle) || []).find(c => segsOf(c.clause).join('/') === want);
+            return sib ? { article: selfArticle, clause: sib, group: null } : null;
+          }
+        }
+      }
+      // A bare «المادة (N)» followed by «من هذه الضوابط» is the annex's own
+      // article, and by «من الضوابط الخاصة بـ…» another regulation's — the
+      // instructions' article of that number is wrong either way. Annex 8's
+      // «المادة (1) من هذه الضوابط» was linked to the definitions article.
+      if (m[6] && !annexWord) {
+        const after = src.slice(m.index + m[0].length, m.index + m[0].length + 30);
+        if (/^\s*من\s*(?:هذه\s*)?الضوابط/.test(after)) {
+          if (!/^\s*من\s*هذه/.test(after) || !String(selfArticle).startsWith('ضوابط')) return null;
+          const want = cleanHead('المادة (' + num + ')');
+          const own = (articleIndex.get(selfArticle) || []).find(x => segsOf(x.clause)[0] === want);
+          return own ? { article: selfArticle, clause: own, group: null } : null;
+        }
+      }
+      const article = num ? (annexWord ? 'ضوابط رقم (' + num + ')' : 'المادة (' + num + ')') : selfArticle;
+      if (!articleIndex.has(article)) return null;
+
+      let head, letter = null;
+      if (m[2]) { head = m[2]; letter = m[1]; }            // (ط) من البند (ثانيا) من المادة (16)
+      else if (m[4]) { head = m[5]; letter = m[4]; }       // (ا) من البند (ثانيا) من هذه المادة
+      else {                                               // (ثانياً/ ز) من المادة (16)
+        const parts = String(m[1] || m[5] || '').split('/');
+        head = parts[0];
+        letter = parts.length === 2 ? parts[1] : null;
+      }
+      // «الفقرتين (د) و (ه)»: two paragraphs are named; point at their clause
+      if (/\)\s*و\s*$/.test(src.slice(Math.max(0, m.index - 12), m.index))) letter = null;
+
+      const t = head ? clauseTarget(article, head, letter) : null;
+      // a same-unit reference that resolves to nothing is not a link
+      if (!num && !t) return null;
+      if (article === selfArticle && !t) return null;
+      return { article, clause: t ? t.clause : null, group: t ? t.group : null };
+    }
+
+    // --- «أُحيل إليه من»: the references the other way round ---
+    // A reference is followable from where it is written; nothing told the
+    // reader of المادة (16) that ضوابط (14) and المادة (27) rest on it, or
+    // the reader of المادة (40) that seventeen annexes cite it as their
+    // authority. Legal databases list these under every section. Same
+    // resolution as linkRefs, run once over the whole text.
+    const backrefs = (() => {
+      const byClause = new Map(), byGroup = new Map(), byArticle = new Map();
+      const push = (map, k, c) => { if (!map.has(k)) map.set(k, []); if (!map.get(k).includes(c)) map.get(k).push(c); };
+      for (const c of data.clauses) {
+        const src = String(c.officialText ?? '');
+        REF_RE.lastIndex = 0;
+        let m;
+        while ((m = REF_RE.exec(src)) !== null) {
+          const r = resolveRef(m, src, c.article, c.clause);
+          if (!r) continue;
+          if (r.group) {
+            // a clause citing its own group («… من هذه المادة» inside it) is no news
+            if (!(r.article === c.article && inGroup(c, r.group))) push(byGroup, r.article + '|' + r.group, c);
+          } else if (r.clause) {
+            if (r.clause.id !== c.id) push(byClause, r.clause.id, c);
+          } else push(byArticle, r.article, c);
+        }
+      }
+      return { byClause, byGroup, byArticle };
+    })();
+
+    // onPick opens the citing clause: in place when browsing, through the
+    // reference trail on the search screen
+    function backrefsBox(c, onPick) {
+      const seen = new Set();
+      const fresh = list => list.filter(x => x.id !== c.id && !seen.has(x) && (seen.add(x), true));
+      const direct = fresh(backrefs.byClause.get(c.id) || []);
+      const groups = [];
+      backrefs.byGroup.forEach((list, key) => {
+        const cut = key.indexOf('|');
+        const g = key.slice(cut + 1);
+        if (key.slice(0, cut) === c.article && inGroup(c, g)) {
+          const l = fresh(list);
+          if (l.length) groups.push([g, l]);
+        }
+      });
+      const whole = fresh(backrefs.byArticle.get(c.article) || []);
+      if (!direct.length && !groups.length && !whole.length) return null;
+      const box = node('div', 'pi-more pi-back');
+      const group = (head, list) => {
+        if (!list.length) return;
+        box.append(node('span', 'pi-more-head', head));
+        // each link can run to three lines on a phone; six of them buried
+        // the page image under a wall of buttons
+        const SHOW = phoneLayout.matches ? 3 : 6;
+        const links = list.map(x => {
+          // some annex labels already carry the annex's name («ضوابط رقم (5) / الديباجة»)
+          const where = String(x.clause || '').startsWith(x.article) ? x.clause : x.article + ' / ' + x.clause;
+          const a = node('button', 'pi-link', where + ' — ' + x.title);
+          a.type = 'button';
+          a.addEventListener('click', e => { e.stopPropagation(); onPick(x); });
+          return a;
+        });
+        links.forEach((a, i) => { if (i >= SHOW) a.hidden = true; box.append(a); });
+        if (links.length > SHOW) {
+          const more = node('button', 'pi-others', '⌄ إظهار ' + countAr(links.length - SHOW, 'بند') + ' أخرى');
+          more.type = 'button';
+          more.addEventListener('click', e => { e.stopPropagation(); links.forEach(a => { a.hidden = false; }); more.remove(); });
+          box.append(more);
+        }
+      };
+      group('↩ أُحيل إلى هذا البند من:', direct);
+      groups.forEach(([g, l]) => group('↩ أُحيل إلى البند («' + g + '») كله من:', l));
+      group('↩ أُحيل إلى ' + c.article + ' كلها من:', whole);
+      return box;
     }
 
     // --- The way back after following a cross-reference ---
@@ -3546,31 +3743,21 @@
       if (snap) restoreTrail(snap);
     }
 
-    function linkRefs(text, selfArticle) {
+    function linkRefs(text, selfArticle, selfClause) {
       const src = String(text ?? '');
       const frag = document.createDocumentFragment();
       let last = 0, m, made = 0;
       REF_RE.lastIndex = 0;
       while ((m = REF_RE.exec(src)) !== null) {
-        const num = m[2] || m[4];
-        const article = num
-          ? (m[0].indexOf('ضوابط') >= 0 ? 'ضوابط رقم (' + num + ')' : 'المادة (' + num + ')')
-          : selfArticle;
-        const inside = m[1] || m[3] || null;
-        if (!articleIndex.has(article)) continue;
-
-        const clause = clauseTarget(article, inside);
-        // a same-unit reference that resolves to nothing is not a link
-        if (!num && !clause) continue;
-        if (article === selfArticle && !clause) continue;
+        const r = resolveRef(m, src, selfArticle, selfClause);
+        if (!r) continue;
+        const { article, clause, group } = r;
 
         if (m.index > last) frag.append(src.slice(last, m.index));
         const btn = node('button', 'ref-link', m[0]);
         btn.type = 'button';
-        btn.title = clause
-          ? 'انتقل إلى ' + article + ' / ' + clause.clause
-          : 'انتقل إلى ' + article;
-        btn.addEventListener('click', () => { pushTrail(); showArticle(article, clause && clause.id); });
+        btn.title = 'انتقل إلى ' + article + (group ? ' / ' + group : clause ? ' / ' + clause.clause : '');
+        btn.addEventListener('click', () => { pushTrail(); showArticle(article, !group && clause ? clause.id : null, group); });
         frag.append(btn);
         last = m.index + m[0].length;
         made++;
@@ -3600,22 +3787,26 @@
 
     // jump straight to a unit rather than searching its name, which would
     // return every clause that merely mentions it
-    function showArticle(target, focusId) {
+    // group: a clause named whole («البند (رابعاً)») that exists only as its
+    // branches; the reader lands on all of them, not on the first alone
+    function showArticle(target, focusId, group) {
       const list = articleIndex.get(target);
       if (!list || !list.length) return;
       lastQuery = '';
       conceptAdded = false;
       conceptJustAdded = false;
       looseShown = false;
-      const focused = list.find(c => c.id === focusId) || null;
+      const members = group ? list.filter(c => inGroup(c, group)) : [];
+      const focused = members.length ? null : list.find(c => c.id === focusId) || null;
       // a reference names one clause; landing the reader in all 90 of the
       // unit's clauses buries the thing they asked for
-      results = focused ? [focused] : list.slice();
+      results = members.length ? members : focused ? [focused] : list.slice();
       shownResults = results;
       selectedId = results[0].id;
-      jumpUnit = { article: target, focused: !!focused, size: list.length };
+      jumpUnit = { article: target, focused: !!focused || members.length > 0,
+                   group: members.length ? group : null, size: list.length };
       document.getElementById('queryTitle').textContent =
-        '«' + target + (focused ? ' / ' + focused.clause : '') + '»';
+        '«' + target + (jumpUnit.group ? ' / ' + group : focused ? ' / ' + focused.clause : '') + '»';
       document.getElementById('chapters').style.display = 'none';
       document.getElementById('workspace').classList.add('visible');
       indexBtn.hidden = false;
@@ -3630,7 +3821,7 @@
       const list = document.getElementById('resultList');
       list.replaceChildren();
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? (jumpUnit.group ? 'البند («' + jumpUnit.group + '») — ' + countAr(results.length, 'بند') : 'بندٌ محال إليه') : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : countAr(results.length, 'نتيجة');
 
       // computed BEFORE the empty state, deliberately: a bridge term like
@@ -3733,7 +3924,9 @@
 
       if (jumpUnit && jumpUnit.focused) {
         const bar = node('div', 'concept-bar');
-        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود '
+        bar.append(node('p', '', (jumpUnit.group
+          ? 'وصلتَ إلى البند («' + jumpUnit.group + '») بفروعه من إحالةٍ داخل النص. وهو من بنود '
+          : 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود ')
           + jumpUnit.article + ' (' + countAr(jumpUnit.size, 'بند') + ').'));
         const all = node('button', 'btn-copy btn-quiet', 'اعرض ' + jumpUnit.article + ' كاملةً');
         all.type = 'button';
@@ -3782,7 +3975,7 @@
       if (loose.length) parts.push(countAr(loose.length, 'نتيجة') + ' بكلمات متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
       if (added) parts.push(countAr(added, 'نتيجة') + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? (jumpUnit.group ? 'البند («' + jumpUnit.group + '») — ' + countAr(results.length, 'بند') : 'بندٌ محال إليه') : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
@@ -3850,7 +4043,7 @@
       const copyBtn = node('button', 'btn-copy', verbatim ? '📋 نسخ السند' : '📋 نسخ النص');
       copyBtn.type = 'button';
       copyBtn.addEventListener('click', () => copyClauseText(c));
-      const linkBtn = node('button', 'btn-copy', '🔗 رابط البند');
+      const linkBtn = node('button', 'btn-copy', '🔗 مشاركة البند');
       linkBtn.type = 'button';
       linkBtn.title = 'رابط يفتح هذا البند مباشرة — للإرسال إلى زميل';
       linkBtn.addEventListener('click', () => shareClause(c));
@@ -3859,7 +4052,7 @@
       quoteHead.append(quoteBtns);
 
       const block = node('blockquote', '');
-      const linked = linkRefs(c.officialText, c.article);
+      const linked = linkRefs(c.officialText, c.article, c.clause);
       quote.append(quoteHead);
       if (linked) {
         quote.append(node('p', 'ref-hint', '🔗 العبارات الملوّنة أدناه روابط — انقر عليها للانتقال إلى الإحالة.'));
@@ -3928,7 +4121,12 @@
       pdf.href = 'تعليمات تنفيذ العقود 2025.pdf';
       pdf.target = '_blank';
 
-      panel.append(head, ref, quote, explain, doc);
+      panel.append(head, ref, quote, explain);
+      // on the search screen a citing clause opens like any other reference,
+      // with the way back to this one
+      const back = backrefsBox(c, x => { pushTrail(); showArticle(x.article, x.id); });
+      if (back) { back.classList.add('source-back'); panel.append(back); }
+      panel.append(doc);
 
       // The PDF ships with the archive but is not published on the web, so
       // over http(s) the link would be dead. Attach it only once the file
@@ -4174,13 +4372,17 @@
           node('span', 'pi-label', c.verbatim === false ? 'صياغة مختصرة للتيسير' : 'النص الحرفي'),
           node('p', 'pi-text', c.officialText));
         if (c.explanation) body.append(node('span', 'pi-label', 'التفسير المبسط'), node('p', 'pi-explain', c.explanation));
-        const share = node('button', 'pi-link pi-share', '🔗 رابط البند');
+        // an action, so a verb; and first, with the clause's other action on
+        // the search screen («نسخ السند») in the same place
+        const share = node('button', 'pi-share', '🔗 مشاركة البند');
         share.type = 'button';
         share.title = 'رابط يفتح هذا البند مباشرة — للإرسال إلى زميل';
         share.addEventListener('click', e => { e.stopPropagation(); shareClause(c); });
-        body.append(share);
+        body.prepend(share);
         const links = branchLinks(c);
         if (links) body.append(links);
+        const back = backrefsBox(c, openClauseAt);
+        if (back) body.append(back);
         entry.dataset.id = c.id;
         b.addEventListener('click', () => {
           const open = b.getAttribute('aria-expanded') !== 'true';
