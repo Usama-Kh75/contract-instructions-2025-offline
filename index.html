@@ -26122,10 +26122,33 @@
     }
 
     // a plain file download for anyone who wants their own local copy
-    // rather than (or alongside) the browser-cached offline mode above
+    // rather than (or alongside) the browser-cached offline mode above.
+    // A cross-origin href (GitHub's raw file) has its `download` attribute
+    // ignored by the browser, which just displays the raw text instead of
+    // saving it - so fetch the page's own (same-origin) URL and save that
+    // as a blob, which honors `download` regardless of where it came from.
     {
       const dl = document.getElementById('downloadCopyLink');
-      if (dl && isWebCopy) dl.hidden = false;
+      if (dl && isWebCopy) {
+        dl.hidden = false;
+        dl.addEventListener('click', async e => {
+          e.preventDefault();
+          try {
+            const res = await fetch(location.href, { cache: 'no-store' });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'تعليمات العقود.html';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+          } catch (err) {
+            location.href = dl.href;
+          }
+        });
+      }
     }
 
     // --- Concept Layer ---
