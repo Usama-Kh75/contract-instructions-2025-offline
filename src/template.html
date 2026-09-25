@@ -2608,7 +2608,7 @@
           const s = await offlineStatus();
           if (s && s.pages < s.total) {
             card.querySelector('strong').textContent = '🖼 صور الصفحات الأصلية';
-            offerPages('الدليل يعمل بلا إنترنت، وصور الصفحات المحفوظة ' + s.pages + ' من ' + s.total + '. احفظها كلها لتظهر دون اتصال.');
+            offerPages('الدليل يعمل بلا إنترنت، وصور الصفحات المحفوظة ' + s.pages + ' من ' + s.total + '. احفظها كلها لتظهر بلا إنترنت.');
           }
         });
       }
@@ -2620,7 +2620,11 @@
     // already offline by definition, so none of this applies and the control
     // below never appears.
     const isWebCopy = location.protocol === 'https:' || location.protocol === 'http:';
+    // until register() settles there is no registration to ask about; on a
+    // first visit that gap read as "not saved" beside a working save button
+    let swPending = false;
     if (isWebCopy && 'serviceWorker' in navigator) {
+      swPending = true;
       // A new version's worker takes over at once (skipWaiting + claim), but
       // this page is still the old one: offer a reload. Only a worker whose version differs from this page's means there is
       // something to reload for; ask the worker actually serving the page.
@@ -2645,6 +2649,7 @@
       navigator.serviceWorker.addEventListener('controllerchange', compareWorker);
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then(reg => {
+          swPending = false;
           // the new worker may have taken over before the listener above
           // existed; that change is never announced again, so look once now
           compareWorker();
@@ -2661,7 +2666,10 @@
           const check = () => { if (navigator.onLine !== false) reg.update().catch(() => { }); };
           setInterval(check, 60 * 60 * 1000);
           document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
-        }).catch(() => { });
+        }).catch(() => {
+          swPending = false;
+          renderOfflineStatus(document.getElementById('offlineState'));
+        });
       });
     }
 
@@ -2678,7 +2686,7 @@
       try {
         const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
         active = !!(reg && reg.active);
-        installing = !!(reg && (reg.installing || reg.waiting));
+        installing = reg ? !!(reg.installing || reg.waiting) : swPending;
       } catch (e) { }
       let shell = false;
       const seenPages = new Set();
@@ -3193,7 +3201,7 @@
         const misses = missStore.read();
         if (misses.length) {
           const box = node('div', 'miss-box');
-          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + countAr(misses.length, 'استعلام') + ' بلا نتيجة. إرسالها إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
+          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + countAr(misses.length, 'استعلام') + ' بلا نتيجة. إرسال هذا السجل إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
           const row = node('div', 'miss-actions');
           const copyBtn = node('button', 'btn-copy', '📋 نسخ الاستعلامات غير الموفقة');
           copyBtn.type = 'button';
@@ -3265,8 +3273,8 @@
           const bar = node('div', 'concept-bar');
           bar.append(node('p', '',
             'ووردت كلماتك متفرّقةً، لا كعبارة واحدة، في ' + countAr(loose.length, 'بند') + '. ' +
-            'أكثرها ليس عن موضوعك، ولذلك أُخّرت.'));
-          const show = node('button', 'btn-copy btn-quiet', 'أظهرها');
+            'هذا النوع من التطابق قلّما يكون عن موضوعك، ولذلك طُوي.'));
+          const show = node('button', 'btn-copy btn-quiet', 'إظهار');
           show.type = 'button';
           show.addEventListener('click', () => { looseShown = true; renderResults(); });
           bar.append(show);
@@ -3322,8 +3330,8 @@
       const added = found && conceptAdded ? found.extras.length : 0;
       const parts = [];
       if (exact.length) parts.push(countAr(exact.length, 'نتيجة') + (phraseQuery ? ' بالعبارة' : ''));
-      if (loose.length) parts.push(loose.length + ' متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
-      if (added) parts.push(added + ' بصيغ أخرى');
+      if (loose.length) parts.push(countAr(loose.length, 'نتيجة') + ' بكلمات متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
+      if (added) parts.push(countAr(added, 'نتيجة') + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent = jumpUnit
         ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
@@ -3453,7 +3461,7 @@
           node('p', '', 'الملف المطلوب: ' + c.pageImage.replace(/^\//, '')),
           node('p', '', isWebCopy
             ? 'تعذّر تحميل الصورة. تحقّق من اتصالك بالإنترنت ثم أعد المحاولة.'
-            : 'الصور لا تأتي داخل الملف: تُعرض عند الاتصال بالإنترنت، أو دون اتصال إذا وُضع مجلد «pages» بجانب الملف.')
+            : 'صور الصفحات لا تأتي داخل الملف: تُعرض عند الاتصال بالإنترنت، أو بلا إنترنت إذا وُضع مجلد «pages» بجانب الملف.')
         );
         imgWrapper.append(warn);
       });
