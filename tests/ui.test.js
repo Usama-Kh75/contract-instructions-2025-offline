@@ -132,7 +132,7 @@ async function run(dev, browser) {
   await sleep(300);
   const more = await pg.evaluate(() => (document.querySelector('.pi-body:not([hidden]) .pi-more') || {}).textContent || '');
   check('ملاحظة «فروع في الصفحة التالية»', /لهذا البند فروع في الصفحة التالية \(10\)/.test(more), more.slice(0, 80));
-  await pg.evaluate(() => document.querySelector('.pi-body:not([hidden]) .pi-link').click());
+  await pg.evaluate(() => document.querySelector('.pi-body:not([hidden]) .pi-more .pi-link').click());
   await sleep(600);
   check('رابط الفرع يفتح «أولاً / أ» في الصفحة 10', await pg.evaluate(() =>
     document.getElementById('chapterPrinted').textContent === 'الصفحة المطبوعة 10' &&
@@ -153,8 +153,49 @@ async function run(dev, browser) {
   await sleep(500);
   check('«قائمة الفصول» يعيد إلى الفصول', await pg.$eval('#chapters', e => getComputedStyle(e).display) === 'block');
 
+  // رابط البند: الإرسال
+  const shared = await pg.evaluate(() => {
+    const c = data.clauses.find(x => x.article === 'المادة (27)' && x.clause === 'أولاً / أ');
+    let got = null;
+    const real = navigator.share;
+    navigator.share = d => { got = d; return Promise.resolve(); };
+    shareClause(c);
+    navigator.share = real;
+    return { id: c.id, got, link: clauseLink(c) };
+  });
+  check('الرابط على الموقع المنشور وبحروف لاتينية', /^https:\/\/usama-kh75\.github\.io\/contract-instructions-2025-offline\/#c\/[\x21-\x7e]+$/.test(shared.link), shared.link);
+  if (dev.phone) check('الهاتف يفتح قائمة المشاركة', !!shared.got && shared.got.url === shared.link, shared.got);
+  else check('الحاسوب ينسخ ولا يفتح قائمة المشاركة', shared.got === null, shared.got);
+
   check('لا أخطاء في الصفحة', errors.length === 0, errors);
   await pg.close();
+
+  // رابط البند: الفتح — صفحة جديدة كما يفتحها من استلم الرابط
+  const errs2 = [];
+  const pg2 = await browser.newPage();
+  await pg2.setViewport(dev.viewport);
+  pg2.on('pageerror', e => errs2.push(e.message));
+  await pg2.goto(URL + '#c/' + encodeURIComponent(shared.id), { waitUntil: 'load' });
+  await sleep(1200);
+  const landed = await pg2.evaluate(() => ({
+    page: document.getElementById('chapterPrinted').textContent,
+    open: (document.querySelector('.pi-item[aria-expanded=true] .pi-num') || {}).textContent,
+    title: (document.querySelector('.pi-item[aria-expanded=true] .pi-title') || {}).textContent,
+    inView: (() => { const e = document.querySelector('.pi-item[aria-expanded=true]'); if (!e) return false; const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()
+  }));
+  check('الرابط يفتح البند نفسه في صفحته', landed.page === 'الصفحة المطبوعة 37' && landed.open === 'أولاً / أ', landed);
+  check('البند المفتوح ظاهر في الشاشة', landed.inView, landed);
+  // رابط آخر والدليل مفتوح
+  const other = await pg2.evaluate(() => data.clauses.find(x => x.article === 'المادة (6)' && x.clause === 'أولاً').id);
+  await pg2.evaluate(id => { location.hash = '#c/' + encodeURIComponent(id); }, other);
+  await sleep(700);
+  check('تغيير الرابط والدليل مفتوح ينتقل إليه', await pg2.evaluate(() =>
+    (document.querySelector('.pi-item[aria-expanded=true] .pi-title') || {}).textContent === 'المناقصة المحدودة'));
+  await pg2.evaluate(() => { location.hash = '#c/no-such-clause'; });
+  await sleep(400);
+  check('رابط لبند غير موجود ينبّه ولا يتعطّل', await pg2.$eval('#toastNotification', e => e.classList.contains('show') && /غير موجود/.test(e.textContent)));
+  check('لا أخطاء عند الفتح من رابط', errs2.length === 0, errs2);
+  await pg2.close();
 }
 
 (async () => {

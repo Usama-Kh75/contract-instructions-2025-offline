@@ -710,6 +710,8 @@
       cursor: pointer;
     }
     .pi-link:hover, .pi-link:focus-visible { background: var(--mint); }
+    .pi-share { margin-top: 2px; }
+    .quote-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 
     .pi-fold { margin: 2px 0 8px; }
     .pi-others {
@@ -2577,6 +2579,31 @@
       }
     }
 
+    // --- A link to one clause ---
+    // Committees pass clauses around by name («راجع المادة 27 أولاً أ»)
+    // and the receiver hunts for them. Legislation sites give every section
+    // a permanent address; this gives every clause one. Always the published
+    // site, even from a downloaded copy, so it opens for whoever receives it.
+    // The id is the clause's own, in Latin letters, so the link survives
+    // WhatsApp intact instead of turning into %D8%A7…
+    const SITE = 'https://usama-kh75.github.io/contract-instructions-2025-offline/';
+    const clauseLink = c => SITE + '#c/' + encodeURIComponent(c.id);
+
+    function shareClause(c) {
+      const url = clauseLink(c);
+      const label = c.article + (c.clause ? ' / ' + c.clause : '') + ' — ' + c.title;
+      // the share sheet (WhatsApp, Telegram…) on a phone; on a computer the
+      // system dialog is an odd detour, so copy instead
+      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (touch && navigator.share) {
+        navigator.share({ title: label, text: label, url }).catch(err => {
+          if (!err || err.name !== 'AbortError') copyPlainText(label + '\n' + url, '🔗 تم نسخ رابط البند');
+        });
+        return;
+      }
+      copyPlainText(label + '\n' + url, '🔗 تم نسخ رابط البند — ألصقه حيث تشاء');
+    }
+
     // --- Lightbox Functions ---
     const lightbox = document.getElementById('lightboxModal');
     const lightboxImg = document.getElementById('lightboxImg');
@@ -3823,7 +3850,13 @@
       const copyBtn = node('button', 'btn-copy', verbatim ? '📋 نسخ السند' : '📋 نسخ النص');
       copyBtn.type = 'button';
       copyBtn.addEventListener('click', () => copyClauseText(c));
-      quoteHead.append(copyBtn);
+      const linkBtn = node('button', 'btn-copy', '🔗 رابط البند');
+      linkBtn.type = 'button';
+      linkBtn.title = 'رابط يفتح هذا البند مباشرة — للإرسال إلى زميل';
+      linkBtn.addEventListener('click', () => shareClause(c));
+      const quoteBtns = node('div', 'quote-btns');
+      quoteBtns.append(copyBtn, linkBtn);
+      quoteHead.append(quoteBtns);
 
       const block = node('blockquote', '');
       const linked = linkRefs(c.officialText, c.article);
@@ -4141,6 +4174,11 @@
           node('span', 'pi-label', c.verbatim === false ? 'صياغة مختصرة للتيسير' : 'النص الحرفي'),
           node('p', 'pi-text', c.officialText));
         if (c.explanation) body.append(node('span', 'pi-label', 'التفسير المبسط'), node('p', 'pi-explain', c.explanation));
+        const share = node('button', 'pi-link pi-share', '🔗 رابط البند');
+        share.type = 'button';
+        share.title = 'رابط يفتح هذا البند مباشرة — للإرسال إلى زميل';
+        share.addEventListener('click', e => { e.stopPropagation(); shareClause(c); });
+        body.append(share);
         const links = branchLinks(c);
         if (links) body.append(links);
         entry.dataset.id = c.id;
@@ -4278,6 +4316,26 @@
     addGroup(data.annexes, 'annex', 'الضوابط الملحقة (20)');
     renderChapter();
 
+    // Opened from a clause link (#c/<id>): straight to that clause, open
+    // beside its page, the same place a reader browsing would find it.
+    function openFromHash() {
+      const m = /^#c\/(.+)$/.exec(location.hash);
+      if (!m) return;
+      let id;
+      try { id = decodeURIComponent(m[1]); } catch (e) { return; }
+      const c = data.clauses.find(x => String(x.id) === id);
+      if (!c) { showToast('⚠ الرابط يشير إلى بند غير موجود في هذا الإصدار'); return; }
+      searchInput.value = '';
+      clearSearchBtn.style.display = 'none';
+      showChapters();
+      openClauseAt(c);
+      const entry = [...pageIndexList.querySelectorAll('.pi-entry')].find(e => e.dataset.id === String(c.id));
+      // centred, so the sticky header never sits on it
+      if (entry) entry.scrollIntoView({ block: 'center' });
+    }
+    // called at the end of the script, once the search box and
+    // showChapters further down exist
+
     // --- Search & Navigation Actions ---
     const indexBtn = document.getElementById('indexButton');
     const searchInput = document.getElementById('searchInput');
@@ -4353,6 +4411,9 @@
       document.getElementById('chapters').scrollIntoView({ behavior: 'smooth' });
     });
     indexBtn.hidden = true;
+
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
 
   </script>
 </body>
