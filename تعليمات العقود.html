@@ -682,6 +682,35 @@
     .pi-text { font-weight: 700; }
     .pi-explain { margin-bottom: 0; }
 
+    .pi-more {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--gold-border);
+    }
+    .pi-more-head {
+      color: var(--gold-text);
+      font-size: 0.78rem;
+      font-weight: 900;
+      margin-top: 4px;
+    }
+    .pi-link {
+      padding: 4px 10px;
+      border: 1px solid var(--mint-border);
+      border-radius: 50px;
+      background: var(--card-bg);
+      color: var(--mint-text);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-align: right;
+      cursor: pointer;
+    }
+    .pi-link:hover, .pi-link:focus-visible { background: var(--mint); }
+
     .pi-fold { margin: 2px 0 8px; }
     .pi-others {
       width: 100%;
@@ -25385,7 +25414,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.21",
+  "version": "1.22",
   "releaseDate": "2026-09-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25680,10 +25709,10 @@
     37
   ],
   "changes": [
+    "البند الذي تكمل فروعه في الصفحة التالية يخبرك بذلك، وتنتقل إلى أي فرع بضغطة. والفرع يدلّك على بنده الأصلي في الصفحة السابقة.",
     "قائمة «في هذه الصفحة» تبدأ ببنود الفصل الذي اخترته، وتُطوى بنود الفصل المجاور في سطر واحد يُفتح عند الحاجة.",
     "اضغط بنداً في قائمة «في هذه الصفحة» فيُفتح نصه وشرحه في مكانه بجانب الصفحة، دون الانتقال إلى شاشة البحث.",
-    "زر «قائمة الفصول» صار عائماً أسفل الشاشة، في متناولك أينما كنت في الصفحة.",
-    "صورة الصفحة بجانب شرح البند تظهر كاملة بدل الجزء العلوي منها."
+    "زر «قائمة الفصول» صار عائماً أسفل الشاشة، في متناولك أينما كنت في الصفحة."
   ]
 }</script>
 
@@ -27602,6 +27631,104 @@
       return kind === 'annex' ? 'ضوابط رقم (' + num + ')' : 'الفصل ' + num;
     };
 
+    // A clause's branches often run onto the next page: «أولاً: المناقصة
+    // المحدودة» is on printed page 9, its «أ» and «ب» on page 10. Opened on
+    // its own it looked complete. Say so, both ways, and link across.
+    const clausesByArticle = new Map();
+    data.clauses.forEach(c => {
+      if (!clausesByArticle.has(c.article)) clausesByArticle.set(c.article, []);
+      clausesByArticle.get(c.article).push(c);
+    });
+    const printedOf = x => x.printedPage;
+
+    function branchLinks(c) {
+      const same = clausesByArticle.get(c.article) || [];
+      const p = Number(c.pdfPage);
+      const box = node('div', 'pi-more');
+      const link = (x, text) => {
+        const a = node('button', 'pi-link', text);
+        a.type = 'button';
+        a.addEventListener('click', e => { e.stopPropagation(); openClauseAt(x); });
+        return a;
+      };
+
+      // branches on later pages; only the top-most, so «أولاً» lists «أ»
+      // and «ب», not every «أ / 1» beneath them
+      const later = same.filter(x => Number(x.pdfPage) > p && x.clause.startsWith(c.clause + ' / '));
+      const top = later.filter(x => !later.some(y => x !== y && x.clause.startsWith(y.clause + ' / ')));
+      if (top.length) {
+        const pages = [...new Set(top.map(printedOf))];
+        const where = pages.length === 1
+          ? (Number(top[0].pdfPage) === p + 1 ? 'في الصفحة التالية (' + pages[0] + ')' : 'في الصفحة ' + pages[0])
+          : 'في الصفحات ' + pages.join('، ');
+        box.append(node('span', 'pi-more-head', '↓ لهذا البند فروع ' + where + ':'));
+        top.slice(0, 8).forEach(x => box.append(link(x, x.clause.split(' / ').pop() + ' — ' + x.title)));
+        if (top.length > 8) box.append(node('span', 'pi-more-head', '…و' + countAr(top.length - 8, 'بند') + ' أخرى'));
+      }
+
+      // and the other way: a branch whose parent is on an earlier page
+      const parts = c.clause.split(' / ');
+      if (parts.length > 1) {
+        const parentLabel = parts.slice(0, -1).join(' / ');
+        const parent = same.find(x => x.clause === parentLabel);
+        // Many parents («ثالثاً» of article 13) have no entry of their own,
+        // only their branches do; then the branch itself carries the note
+        // that its siblings go on over the page.
+        if (!parent || Number(parent.pdfPage) === p) {
+          const depth = parts.length;
+          const sibs = same.filter(x => Number(x.pdfPage) > p &&
+            x.clause.startsWith(parentLabel + ' / ') && x.clause.split(' / ').length === depth);
+          if (sibs.length && !top.length) {
+            const pages = [...new Set(sibs.map(printedOf))];
+            box.append(node('span', 'pi-more-head', '↓ تتمة فروع «' + parentLabel + '» ' +
+              (pages.length === 1
+                ? (Number(sibs[0].pdfPage) === p + 1 ? 'في الصفحة التالية (' + pages[0] + ')' : 'في الصفحة ' + pages[0])
+                : 'في الصفحات ' + pages.join('، ')) + ':'));
+            sibs.slice(0, 8).forEach(x => box.append(link(x, x.clause.split(' / ').pop() + ' — ' + x.title)));
+            if (sibs.length > 8) box.append(node('span', 'pi-more-head', '…و' + countAr(sibs.length - 8, 'بند') + ' أخرى'));
+          }
+        }
+        if (!parent) {
+          // the earliest by page, whatever order the unit happens to list them in
+          const first = same.filter(x => Number(x.pdfPage) < p &&
+            x.clause.startsWith(parentLabel + ' / ') && x.clause.split(' / ').length === parts.length)
+            .reduce((m, x) => (!m || Number(x.pdfPage) < Number(m.pdfPage) ? x : m), null);
+          if (first) {
+            box.append(node('span', 'pi-more-head', '↑ فروع «' + parentLabel + '» تبدأ ' +
+              (Number(first.pdfPage) === p - 1 ? 'في الصفحة السابقة (' + printedOf(first) + ')' : 'في الصفحة ' + printedOf(first)) + ':'));
+            box.append(link(first, first.clause + ' — ' + first.title));
+          }
+        }
+        if (parent && Number(parent.pdfPage) < p) {
+          box.append(node('span', 'pi-more-head',
+            '↑ هذا فرع من البند «' + parent.clause + '» ' +
+            (Number(parent.pdfPage) === p - 1 ? 'في الصفحة السابقة (' + printedOf(parent) + ')' : 'في الصفحة ' + printedOf(parent)) + ':'));
+          box.append(link(parent, parent.clause + ' — ' + parent.title));
+        }
+      }
+      return box.childNodes.length ? box : null;
+    }
+
+    // go to a clause's page and open it in the list there
+    function openClauseAt(x) {
+      const p = Number(x.pdfPage);
+      const sec = sectionFor(p);
+      if (!sec) return;
+      selectedKind = sec.kind;
+      selectedChapter = sec.number;
+      chapterPage = p;
+      renderChapter();
+      pageIndexEl.open = true;   // folded on a phone
+      const entry = [...pageIndexList.querySelectorAll('.pi-entry')].find(e => e.dataset.id === String(x.id));
+      if (!entry) return;
+      const fold = entry.closest('.pi-fold-body');
+      if (fold && fold.hidden) fold.previousElementSibling.click();
+      const b = entry.querySelector('.pi-item');
+      if (b.getAttribute('aria-expanded') !== 'true') b.click();
+      b.focus({ preventScroll: true });
+      entry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
     function renderPageIndex(pdfPage) {
       // rebuilt only when the page or the chapter changes: rebuilding
       // replays the wave. Two chapters can share a page (10 and 11 do).
@@ -27626,6 +27753,9 @@
           node('span', 'pi-label', c.verbatim === false ? 'صياغة مختصرة للتيسير' : 'النص الحرفي'),
           node('p', 'pi-text', c.officialText));
         if (c.explanation) body.append(node('span', 'pi-label', 'التفسير المبسط'), node('p', 'pi-explain', c.explanation));
+        const links = branchLinks(c);
+        if (links) body.append(links);
+        entry.dataset.id = c.id;
         b.addEventListener('click', () => {
           const open = b.getAttribute('aria-expanded') !== 'true';
           // one at a time, so the list stays a list
