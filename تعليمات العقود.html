@@ -1256,16 +1256,21 @@
       color: var(--accent-gold);
     }
 
+    /* the whole page, fitted — it used to be cut at 380px, which showed
+       only the top of the scan, often not the clause the reader opened */
     .doc-img-wrapper {
       cursor: zoom-in;
-      display: block;
+      display: flex;
+      justify-content: center;
       overflow: hidden;
-      max-height: 380px;
     }
 
     .doc img {
-      width: 100%;
       display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 78vh;
       transition: transform 0.25s ease;
     }
 
@@ -25299,7 +25304,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.17",
+  "version": "1.18",
   "releaseDate": "2026-09-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25572,10 +25577,10 @@
     }
   ],
   "changes": [
+    "صورة الصفحة بجانب شرح البند تظهر كاملة بدل الجزء العلوي منها.",
+    "على الهاتف: اختيار فصل من القائمة ينقلك إليه مباشرة دون تمرير.",
     "بجانب صورة الصفحة قائمة «في هذه الصفحة» ببنودها، واضغط أي بند لفتح شرحه.",
-    "اضغط صورة الصفحة لتكبيرها، وأزرار التقليب صارت تحتها مباشرة.",
-    "في نافذة العرض: نقرتان على الصفحة تكبّرانها عند موضع النقر، ويمكن سحبها بالفأرة أو التكبير بـ Ctrl مع عجلة الفأرة.",
-    "على الهاتف: أزرار نافذة العرض في شريط أسفل الشاشة قريب من الإبهام."
+    "في نافذة العرض: نقرتان على الصفحة تكبّرانها، ويمكن سحبها بالفأرة أو التكبير بـ Ctrl مع عجلة الفأرة."
   ]
 }</script>
 
@@ -27544,6 +27549,15 @@
           selectedChapter = c.number;
           chapterPage = c.pdfPage;
           renderChapter();
+          // On a phone the chapter sits BELOW the whole list, so a tap
+          // seemed to do nothing until the reader scrolled down to find it.
+          // Take them there; on a wide screen it is already beside the list.
+          if (phoneLayout.matches) {
+            const info = document.querySelector('.chapter-info');
+            const bar = document.querySelector('.topbar');
+            const top = info.getBoundingClientRect().top + window.scrollY - (bar ? bar.offsetHeight : 0) - 8;
+            window.scrollTo({ top, behavior: 'smooth' });
+          }
         });
         navList.append(b);
       });
