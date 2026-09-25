@@ -26018,11 +26018,11 @@
 
       // The app itself works offline once installed; the 168 page scans do
       // not come with it. Offer them right here, still on an explicit press.
-      const offerPages = () => {
+      const offerPages = (msg = '✔ ثُبّت التطبيق. لعرض صور الصفحات الأصلية بلا إنترنت أيضاً احفظها الآن.') => {
         go.textContent = 'احفظ صور الصفحات (31 م.ب)';
         go.disabled = false;
         go.hidden = false;
-        text.textContent = '✔ ثُبّت التطبيق. لعرض صور الصفحات الأصلية بلا إنترنت أيضاً احفظها الآن.';
+        text.textContent = msg;
         card.hidden = false;
         savingPages = true;
       };
@@ -26045,8 +26045,25 @@
       document.getElementById('installDismiss').addEventListener('click', () => {
         closed = true;
         card.hidden = true;
-        try { localStorage.setItem(KEY, '1'); } catch (e) { }
+        try { localStorage.setItem(savingPages ? PAGES_KEY : KEY, '1'); } catch (e) { }
       });
+
+      // Installed from the address bar, the card never ran and the scans were
+      // never offered; the installed app is where the reader expects to be
+      // ready offline, so ask there, at the top, until they are all saved.
+      // After load: offlineStatus depends on declarations further down.
+      const PAGES_KEY = 'pagesHintDismissed';
+      let pagesDismissed = false;
+      try { pagesDismissed = localStorage.getItem(PAGES_KEY) === '1'; } catch (e) { }
+      if (web && installed && !pagesDismissed && 'caches' in window) {
+        window.addEventListener('load', async () => {
+          const s = await offlineStatus();
+          if (s && s.pages < s.total) {
+            card.querySelector('strong').textContent = '🖼 صور الصفحات الأصلية';
+            offerPages('البرنامج يعمل بلا إنترنت، وصور الصفحات المحفوظة ' + s.pages + ' من ' + s.total + '. احفظها كلها لتظهر دون اتصال.');
+          }
+        });
+      }
       window.addEventListener('appinstalled', () => { closed = true; if (!savingPages) card.hidden = true; });
     }
 
@@ -26100,10 +26117,10 @@
         el.textContent = '✔ جاهز للعمل بلا إنترنت — البرنامج و' + s.total + ' صفحة محفوظة.';
       } else if (s.pages > 0) {
         el.classList.add('partial');
-        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت. الصور المحفوظة: ' + s.pages + ' من ' + s.total + '.';
+        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت. الصور المحفوظة: ' + s.pages + ' من ' + s.total + ' — اضغط الزر أعلاه لحفظ الباقي.';
       } else {
         el.classList.add('partial');
-        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت، ولم تُحفظ صور الصفحات بعد.';
+        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت، ولم تُحفظ صور الصفحات بعد — اضغط الزر أعلاه لحفظها.';
       }
     }
 
