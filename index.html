@@ -25970,7 +25970,7 @@
     }
 
     // --- Install as an app (web copy only) ---
-    // Chrome/Edge on Android offer the install through a captured event; iOS
+    // Chrome/Edge (Android and desktop) offer the install through a captured event; iOS
     // has no such event at all - the only route is Share > Add to Home Screen,
     // which nobody finds unprompted. So say where it is, once, and let the
     // reader dismiss it for good.
@@ -25988,11 +25988,16 @@
       let dismissed = false;
       try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) { }
 
+      // Chrome/Edge on a computer install the same way as on Android, but
+      // only that event proves it; other desktop browsers get no card at all
+      if (!isPhone) card.querySelector('strong').textContent = '💻 ثبّته كتطبيق على حاسوبك';
+
       let deferred = null;
       let closed = false;   // dismissed or installed: nothing may reopen the card
+      let savingPages = false;
       const show = msg => { if (closed) return; text.textContent = msg; card.hidden = false; };
 
-      if (web && isPhone && !installed && !dismissed) {
+      if (web && !installed && !dismissed) {
         if (isIOS) {
           show('اضغط زر المشاركة (المربع والسهم ⬆) في متصفحك، ثم اختر «إضافة إلى الشاشة الرئيسية». يعمل بعدها كتطبيق وبلا إنترنت.');
         }
@@ -26004,27 +26009,45 @@
         });
         // the event may never fire (already installed, or the browser holds it
         // back); don't leave Android readers with nothing at all
-        if (!isIOS) {
+        if (isPhone && !isIOS) {
           setTimeout(() => {
             if (card.hidden && !installed) show('من قائمة المتصفح (⋮) اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».');
           }, 4000);
         }
       }
+
+      // The app itself works offline once installed; the 168 page scans do
+      // not come with it. Offer them right here, still on an explicit press.
+      const offerPages = () => {
+        go.textContent = 'احفظ صور الصفحات (31 م.ب)';
+        go.disabled = false;
+        go.hidden = false;
+        text.textContent = '✔ ثُبّت التطبيق. لعرض صور الصفحات الأصلية بلا إنترنت أيضاً احفظها الآن.';
+        card.hidden = false;
+        savingPages = true;
+      };
+
       go.addEventListener('click', async () => {
+        if (savingPages) {
+          go.hidden = true;
+          await cacheAllPages(document.getElementById('offlineBtn'), text);
+          return;
+        }
         if (!deferred) return;
         const ev = deferred;
         deferred = null;   // the event is single-use
         go.disabled = true;
-        try { ev.prompt(); await ev.userChoice; } catch (e) { }
+        let accepted = false;
+        try { ev.prompt(); accepted = (await ev.userChoice).outcome === 'accepted'; } catch (e) { }
         closed = true;
-        card.hidden = true;
+        if (accepted && 'caches' in window) offerPages(); else card.hidden = true;
       });
       document.getElementById('installDismiss').addEventListener('click', () => {
         closed = true;
         card.hidden = true;
         try { localStorage.setItem(KEY, '1'); } catch (e) { }
       });
-      window.addEventListener('appinstalled', () => { closed = true; card.hidden = true; });
+      window.addEventListener('appinstalled', () => { closed = true; if (!savingPages) card.hidden = true; });
     }
 
     // --- Offline (web copy only) ---
