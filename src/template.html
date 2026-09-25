@@ -1755,6 +1755,35 @@
   <script id="appData" type="application/json">@@APPDATA@@</script>
 
   <script>
+    // --- Images for a copy opened from disk ---
+    // The downloaded file travels alone, without the «pages» folder or the
+    // icon. Try the image beside the file first (a full-folder copy works
+    // with no internet), then the published site; only if both fail do the
+    // images' own error handlers get to say it is missing.
+    if (location.protocol === 'file:') {
+      const HOSTED = 'https://usama-kh75.github.io/contract-instructions-2025-offline/';
+      const retry = img => {
+        const src = img.getAttribute('src');
+        if (!src || img.dataset.hosted || /^(https?:|data:|blob:)/.test(src)) return false;
+        img.dataset.hosted = '1';
+        img.src = HOSTED + src.replace(/^\.?\//, '');
+        return true;
+      };
+      window.addEventListener('error', e => {
+        const t = e.target;
+        if (t instanceof HTMLImageElement && retry(t)) e.stopPropagation();
+      }, true);
+      // a new src is a new image: let it try locally again first
+      new MutationObserver(ms => ms.forEach(m => {
+        const t = m.target;
+        if (t.dataset.hosted && !t.src.startsWith(HOSTED)) delete t.dataset.hosted;
+      })).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['src'] });
+      // images in the markup may have failed before this script ran
+      document.querySelectorAll('img').forEach(img => {
+        if (img.complete && img.naturalWidth === 0) retry(img);
+      });
+    }
+
     // --- Data & Integrity Handling ---
     function fatalDataError(msg) {
       const b = document.createElement('div');
@@ -3170,7 +3199,9 @@
         warn.append(
           node('strong', '', '⚠️ تعذّر عرض صورة الصفحة ' + c.printedPage),
           node('p', '', 'الملف المطلوب: ' + c.pageImage.replace(/^\//, '')),
-          node('p', '', 'مجلد «pages» غير موجود بجانب ملف «تعليمات العقود.html». أبقِ الملف والمجلد في المجلد نفسه؛ ولا تنقل ملف HTML وحده.')
+          node('p', '', isWebCopy
+            ? 'تعذّر تحميل الصورة. تحقّق من اتصالك بالإنترنت ثم أعد المحاولة.'
+            : 'الصور لا تأتي داخل الملف: تُعرض عند الاتصال بالإنترنت، أو دون اتصال إذا وُضع مجلد «pages» بجانب الملف.')
         );
         imgWrapper.append(warn);
       });
