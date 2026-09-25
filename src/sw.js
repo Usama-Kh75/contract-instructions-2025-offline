@@ -27,24 +27,22 @@ const SHELL_FILES = [
 // ويجب أن تكون الصفحة من الإصدار نفسه: أثناء النشر قد يصل sw.js الجديد
 // والصفحة القديمة، فيُعلن الإصدار الجديد ولا يأتي به التحديث أبداً.
 // فشلُ التثبيت هنا يُبقي العامل القديم وهيكله، ويعيد المتصفح المحاولة لاحقاً.
-const REQUIRED = ['./', './index.html'];
-
+// و«./» و«./index.html» الصفحة نفسها (1.5 م.ب): تُنزَّل مرة وتُحفظ بالاسمين،
+// وكانت تُنزَّل مرتين فيطول التثبيت الأول ويُثقل على بيانات الهاتف.
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(SHELL);
-    await Promise.all(SHELL_FILES.map(async f => {
-      let res;
-      try { res = await fetch(f, { cache: 'reload' }); } catch (err) { res = null; }
-      const required = REQUIRED.includes(f);
-      if (!res || !res.ok) {
-        if (required) throw new Error('shell file unavailable: ' + f);
-        return;   // أيقونة ناقصة: يُعاد جلبها عند أول زيارة متصلة
-      }
-      if (required) {
-        const body = await res.clone().text();
-        if (!body.includes('"version": "' + VERSION + '"')) throw new Error('page is not version ' + VERSION);
-      }
-      await c.put(f, res);
+    const page = await fetch('./index.html', { cache: 'reload' });
+    if (!page.ok) throw new Error('page unavailable');
+    const body = await page.clone().text();
+    if (!body.includes('"version": "' + VERSION + '"')) throw new Error('page is not version ' + VERSION);
+    await c.put('./index.html', page.clone());
+    await c.put('./', page);
+    await Promise.all(SHELL_FILES.filter(f => f !== './' && f !== './index.html').map(async f => {
+      try {
+        const res = await fetch(f, { cache: 'reload' });
+        if (res.ok) await c.put(f, res);
+      } catch (err) { /* أيقونة ناقصة: يُعاد جلبها عند أول زيارة متصلة */ }
     }));
     await self.skipWaiting();
   })());

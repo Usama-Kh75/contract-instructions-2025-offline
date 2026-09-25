@@ -2614,6 +2614,14 @@
           // the new worker may have taken over before the listener above
           // existed; that change is never announced again, so look once now
           compareWorker();
+          // the readiness line in the footer must follow the install as it
+          // finishes, not stay frozen at what was true when the page painted
+          const refresh = () => renderOfflineStatus(document.getElementById('offlineState'));
+          const track = w => { if (w) w.addEventListener('statechange', refresh); };
+          track(reg.installing);
+          track(reg.waiting);
+          reg.addEventListener('updatefound', () => { track(reg.installing); refresh(); });
+          refresh();
           // left open for days, or resumed from the background as an app,
           // the page would otherwise never look for a new version
           const check = () => { if (navigator.onLine !== false) reg.update().catch(() => { }); };
@@ -2628,7 +2636,16 @@
     // checked beforehand rather than discovered.
     async function offlineStatus() {
       if (!isWebCopy || !('caches' in window)) return null;
-      const controlled = !!(navigator.serviceWorker && navigator.serviceWorker.controller);
+      // What decides the next offline opening is a registered worker plus a
+      // saved page - not whether this particular load went through it: a
+      // hard refresh bypasses the worker, and so does the very first visit,
+      // yet the next opening is served offline all the same.
+      let active = false, installing = false;
+      try {
+        const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+        active = !!(reg && reg.active);
+        installing = !!(reg && (reg.installing || reg.waiting));
+      } catch (e) { }
       let shell = false;
       const seenPages = new Set();
       try {
@@ -2645,16 +2662,29 @@
           }
         }
       } catch (e) { return null; }
-      const total = new Set(data.clauses.map(c => c.pdfPage)).size;
-      return { controlled, shell, pages: seenPages.size, total };
+      // count the pages the clauses need, by name: the chapter viewer can
+      // cache pages outside that set, and a raw count would then reach the
+      // total while a needed page is still missing
+      const need = [...new Set(data.clauses.map(c => c.pdfPage))]
+        .map(p => new URL('./pages/page-' + p + '.jpg', location.href).href);
+      const pages = need.filter(u => seenPages.has(u)).length;
+      return { active, installing, shell, pages, total: need.length };
     }
 
+    // renders overlap (startup, worker ready, each install step); only the
+    // latest may write, or an older answer could put "saving…" back
+    let offlineRender = 0;
     async function renderOfflineStatus(el) {
       if (!el) return;
+      const mine = ++offlineRender;
       const s = await offlineStatus();
+      if (mine !== offlineRender) return;
       if (!s) { el.textContent = ''; return; }
       el.classList.remove('ok', 'partial', 'bad');
-      if (!s.controlled || !s.shell) {
+      if ((!s.active || !s.shell) && s.installing) {
+        el.classList.add('partial');
+        el.textContent = '⏳ يجري حفظ البرنامج للعمل بلا إنترنت… أبقِ الصفحة مفتوحة لحظات.';
+      } else if (!s.active || !s.shell) {
         el.classList.add('bad');
         el.textContent = '⚠ لم يُحفظ البرنامج بعد للعمل بلا إنترنت — حدّث الصفحة وأنت متصل، ثم أعد الفتح.';
       } else if (s.pages >= s.total) {
@@ -2716,7 +2746,7 @@
       }
       status.textContent = failed
         ? 'حُفظت ' + (done - failed) + ' صفحة، وتعذّرت ' + failed + '. أعد المحاولة عند اتصال أفضل.'
-        : '✔ حُفظت كل الصفحات. يعمل الدليل الآن بلا إنترنت.';
+        : '✔ حُفظت صور الصفحات كلها (' + total + ').';
     }
 
     {
