@@ -2614,7 +2614,13 @@
     // as a blob, which honors `download` regardless of where it came from.
     {
       const dl = document.getElementById('downloadCopyLink');
-      if (dl && isWebCopy) {
+      // meaningless on a phone, and inside the installed app the reader
+      // already has their copy
+      const phone = /iphone|ipad|ipod|android/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const standalone = window.navigator.standalone === true ||
+        (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+      if (dl && isWebCopy && !phone && !standalone) {
         dl.hidden = false;
         dl.addEventListener('click', async e => {
           e.preventDefault();
