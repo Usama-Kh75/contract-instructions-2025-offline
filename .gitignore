@@ -2,3 +2,4 @@
 *.pdf
 *.bak
 src/.built-hash
+node_modules/

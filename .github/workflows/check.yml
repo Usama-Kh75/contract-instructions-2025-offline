@@ -1,0 +1,26 @@
+# يعمل مع كل رفع: يتأكد أن الملفات المنشورة مطابقة لمصادرها، وأن البيانات
+# سليمة، وأن الواجهة تعمل بحجم الحاسوب والهاتف. علامة ✘ حمراء في GitHub
+# تعني أن في الإصدار المرفوع خللاً يجب إصلاحه قبل أن يصل إلى الزملاء.
+name: فحص الدليل
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: المخرجات مطابقة للمصادر، والبيانات سليمة
+        run: npm run check
+      - name: اختبارات الواجهة (حاسوب وهاتف)
+        run: npm test
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
