@@ -35,6 +35,7 @@
       --primary-glow: rgba(15, 76, 66, 0.25);
       --accent-gold: #c28830;
       --accent-gold-hover: #aa7322;
+      --warn-text: #a4461b;
       --gold-bg: #fdf6ea;
       --gold-border: #f2dcaf;
       --gold-text: #825310;
@@ -71,6 +72,7 @@
       --primary-glow: rgba(29, 114, 101, 0.4);
       --accent-gold: #e2a548;
       --accent-gold-hover: #f3b960;
+      --warn-text: #f0a877;
       --gold-bg: #281f13;
       --gold-border: #574122;
       --gold-text: #f0c37b;
@@ -395,6 +397,8 @@
       font-size: 1.1rem;
       cursor: pointer;
       padding: 4px 8px;
+      min-width: 40px;
+      min-height: 40px;
       border-radius: 50%;
       display: none;
       transition: color 0.15s ease;
@@ -717,6 +721,8 @@
       opacity: 0.75;
       cursor: pointer;
       padding: 4px 6px;
+      min-width: 40px;
+      min-height: 40px;
     }
 
     .back-inline {
@@ -1289,9 +1295,9 @@
       margin-top: 4px;
     }
 
-    .offline-state.ok { color: #7fc8a0; }
+    .offline-state.ok { color: var(--mint-text); }
     .offline-state.partial { opacity: 0.85; }
-    .offline-state.bad { color: #e8a87c; font-weight: 700; }
+    .offline-state.bad { color: var(--warn-text); font-weight: 700; }
 
     .disclaimer {
       margin-top: 8px;
@@ -1490,6 +1496,9 @@
     }
 
     /* Toast Notification */
+    /* the back pill sits where the toast would land; lift the toast over it */
+    .nav-back:not([hidden]) ~ .toast { bottom: 84px; }
+
     .toast {
       position: fixed;
       bottom: 24px;
@@ -1654,7 +1663,7 @@
       <div class="topbar-end">
         <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
         <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>
-        <button class="btn-action" id="indexButton" type="button">↩ الفهرس العام</button>
+        <button class="btn-action" id="indexButton" type="button" style="display: none;">↩ الفهرس العام</button>
       </div>
     </div>
   </header>
@@ -1688,7 +1697,7 @@
       <div class="install-card" id="installCard" hidden>
         <div class="install-body">
           <strong>📲 ثبّته كتطبيق على هاتفك</strong>
-          <p id="installText"></p>
+          <p id="installText" aria-live="polite"></p>
         </div>
         <div class="install-actions">
           <button type="button" class="install-go" id="installGo" hidden>تثبيت</button>
@@ -1724,9 +1733,9 @@
 
           <div>
             <div class="pager">
-              <button class="pagebtn" id="prevPage" type="button">‹ الصفحة السابقة</button>
+              <button class="pagebtn" id="prevPage" type="button">› الصفحة السابقة</button>
               <span class="pagecount" id="pageCount"></span>
-              <button class="pagebtn" id="nextPage" type="button">الصفحة التالية ›</button>
+              <button class="pagebtn" id="nextPage" type="button">الصفحة التالية ‹</button>
             </div>
             <button class="linkbtn" id="chapterOpenModal" type="button">🔍 تكبير الصفحة وقراءتها</button>
           </div>
@@ -1785,7 +1794,7 @@
   </div>
 
   <!-- Toast Notification for Copying -->
-  <div class="toast" id="toastNotification">📋 تم نسخ السند القانوني بنجاح!</div>
+  <div class="toast" id="toastNotification" role="status" aria-live="polite">📋 تم نسخ السند القانوني بنجاح!</div>
 
   <!-- Footer -->
   <footer>
@@ -1801,9 +1810,9 @@
         <span class="release-stamp" id="releaseStamp"></span>
         <span class="fingerprint" id="fingerprint"></span>
         <span class="offline-box" id="offlineBox" hidden>
-          <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ الصفحات للعمل بلا إنترنت (31 م.ب)</button>
-          <span class="offline-status" id="offlineStatus"></span>
-          <span class="offline-state" id="offlineState"></span>
+          <button class="btn-copy btn-quiet" id="offlineBtn" type="button">⬇ احفظ صور الصفحات للعمل بلا إنترنت (31 م.ب)</button>
+          <span class="offline-status" id="offlineStatus" aria-live="polite"></span>
+          <span class="offline-state" id="offlineState" aria-live="polite"></span>
         </span>
         <a class="btn-copy btn-quiet" id="downloadCopyLink"
            href="https://raw.githubusercontent.com/Usama-Kh75/contract-instructions-2025-offline/main/index.html"
@@ -1952,15 +1961,16 @@
     document.getElementById('updateClose').addEventListener('click', () => { updateBar.hidden = true; });
     document.getElementById('updateReload').addEventListener('click', () => location.reload());
 
+    function newer(a, b) {
+      const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) {
+        const d = (x[i] || 0) - (y[i] || 0);
+        if (d) return d > 0;
+      }
+      return false;
+    }
+
     {
-      const newer = (a, b) => {
-        const x = a.split('.').map(Number), y = b.split('.').map(Number);
-        for (let i = 0; i < Math.max(x.length, y.length); i++) {
-          const d = (x[i] || 0) - (y[i] || 0);
-          if (d) return d > 0;
-        }
-        return false;
-      };
       const KEY = 'lastSeenVersion';
       const ver = typeof data.version === 'string' ? data.version : '';
       let seen = null;
@@ -2203,6 +2213,25 @@
       }).map(r => r.c);
     }
 
+    // --- Counting in Arabic ---
+    // the counted noun changes with the number: بند واحد، بندان، ٣–١٠ بنود،
+    // ١١–٩٩ بنداً، ١٠٠ بند. A fixed "n بنداً" read wrong for most n.
+    function countAr(n, noun) {
+      const forms = {
+        'بند': ['بند واحد', 'بندان', 'بنود', 'بنداً', 'بند'],
+        'نتيجة': ['نتيجة واحدة', 'نتيجتان', 'نتائج', 'نتيجةً', 'نتيجة'],
+        'صفحة': ['صفحة واحدة', 'صفحتان', 'صفحات', 'صفحةً', 'صفحة'],
+        'استعلام': ['استعلام واحد', 'استعلامان', 'استعلامات', 'استعلاماً', 'استعلام']
+      }[noun];
+      const [one, two, few, many, hundred] = forms;
+      if (n === 1) return one;
+      if (n === 2) return two;
+      const r = n % 100;
+      if (n === 0 || (r >= 3 && r <= 10)) return n + ' ' + few;
+      if (r >= 11) return n + ' ' + many;
+      return n + ' ' + hundred;
+    }
+
     // --- DOM Helper Functions ---
     function node(tag, cls, text) {
       const e = document.createElement(tag);
@@ -2347,7 +2376,9 @@
       // own back gesture is the reflex for "get out of this picture" - and
       // without a history entry to consume it, it leaves the app entirely.
       if (!lightboxHistory) {
-        try { history.pushState({ lightbox: true }, ''); lightboxHistory = true; } catch (e) { }
+        // carry the trail depth: going Forward onto this entry later must not
+        // read as depth 0 and unwind the reader's reference trail
+        try { history.pushState({ lightbox: true, nav: navDepth }, ''); lightboxHistory = true; } catch (e) { }
       }
       // a cached image is already complete and fires no load event; an
       // uncached one is laid out by the standing load listener below
@@ -2577,7 +2608,7 @@
           const s = await offlineStatus();
           if (s && s.pages < s.total) {
             card.querySelector('strong').textContent = '🖼 صور الصفحات الأصلية';
-            offerPages('البرنامج يعمل بلا إنترنت، وصور الصفحات المحفوظة ' + s.pages + ' من ' + s.total + '. احفظها كلها لتظهر دون اتصال.');
+            offerPages('الدليل يعمل بلا إنترنت، وصور الصفحات المحفوظة ' + s.pages + ' من ' + s.total + '. احفظها كلها لتظهر دون اتصال.');
           }
         });
       }
@@ -2604,7 +2635,10 @@
       });
       const compareWorker = async () => {
         const v = await askVersion();
-        if (typeof v === 'string' && v !== data.version) {
+        // only a worker NEWER than this page: during a deploy the page can come
+        // fresh from the network while the old worker still controls it, and
+        // offering a reload then would step the reader back a version
+        if (typeof v === 'string' && newer(v, data.version)) {
           showUpdateBar('🔄 يتوفر إصدار أحدث من الدليل (' + v + ')', [], true);
         }
       };
@@ -2651,13 +2685,13 @@
       try {
         for (const name of await caches.keys()) {
           const c = await caches.open(name);
-          if (name.indexOf('shell-') === 0 && !shell) {
+          if (/^(cic2025-)?shell-/.test(name) && !shell) {
             shell = !!(await c.match('./index.html')) || !!(await c.match('./'));
           }
           // count distinct URLs across every pages-* cache: assigning per
           // cache would let one version's count overwrite another's, and the
           // answer would depend on the order the keys happen to come back in
-          if (name.indexOf('pages-') === 0) {
+          if (/^(cic2025-)?pages-/.test(name)) {
             for (const req of await c.keys()) seenPages.add(req.url);
           }
         }
@@ -2687,30 +2721,33 @@
       if (saveBtn) saveBtn.hidden = s.active && s.shell && s.pages >= s.total;
       if ((!s.active || !s.shell) && s.installing) {
         el.classList.add('partial');
-        el.textContent = '⏳ يجري حفظ البرنامج للعمل بلا إنترنت… أبقِ الصفحة مفتوحة لحظات.';
+        el.textContent = '⏳ يجري حفظ الدليل للعمل بلا إنترنت… أبقِ الصفحة مفتوحة لحظات.';
       } else if (!s.active || !s.shell) {
         el.classList.add('bad');
-        el.textContent = '⚠ لم يُحفظ البرنامج بعد للعمل بلا إنترنت — حدّث الصفحة وأنت متصل، ثم أعد الفتح.';
+        el.textContent = '⚠ لم يُحفظ الدليل بعد للعمل بلا إنترنت — حدّث الصفحة وأنت متصل، ثم أعد الفتح.';
       } else if (s.pages >= s.total) {
         el.classList.add('ok');
-        el.textContent = '✔ جاهز للعمل بلا إنترنت — البرنامج و' + s.total + ' صفحة محفوظة.';
+        el.textContent = '✔ جاهز للعمل بلا إنترنت — الدليل وصور الصفحات كلها (' + s.total + ') محفوظة.';
       } else if (s.pages > 0) {
         el.classList.add('partial');
-        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت. الصور المحفوظة: ' + s.pages + ' من ' + s.total + ' — اضغط الزر أعلاه لحفظ الباقي.';
+        el.textContent = 'الدليل يعمل بلا إنترنت. صور الصفحات المحفوظة: ' + s.pages + ' من ' + s.total + ' — اضغط الزر أعلاه لحفظ الباقي.';
       } else {
         el.classList.add('partial');
-        el.textContent = 'البرنامج والبحث يعملان بلا إنترنت، ولم تُحفظ صور الصفحات بعد — اضغط الزر أعلاه لحفظها.';
+        el.textContent = 'الدليل يعمل بلا إنترنت، ولم تُحفظ صور الصفحات بعد — اضغط الزر أعلاه لحفظها.';
       }
     }
 
     // must match PAGES in sw.js; naming it once keeps the page and the worker
     // from drifting apart over a version bump
-    const PAGES_CACHE = 'pages-v1';
+    const PAGES_CACHE = 'cic2025-pages-v1';
 
     // Downloading the 168 page scans is 31 MB of somebody's mobile data.
     // It happens on an explicit press, never on its own, and reports progress.
     async function cacheAllPages(btn, status) {
       if (!('caches' in window)) { status.textContent = 'متصفحك لا يدعم الحفظ للعمل بلا إنترنت.'; return; }
+      // ask the browser not to evict what the reader is about to spend 31 MB
+      // on; granted or not, saving goes ahead the same
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { }); } catch (e) { }
       btn.disabled = true;
       try {
         await cachePages(status);
@@ -2749,7 +2786,7 @@
         status.textContent = 'يجري الحفظ… ' + done + ' من ' + total;
       }
       status.textContent = failed
-        ? 'حُفظت ' + (done - failed) + ' صفحة، وتعذّرت ' + failed + '. أعد المحاولة عند اتصال أفضل.'
+        ? 'حُفظت ' + countAr(done - failed, 'صفحة') + '، وتعذّر حفظ ' + countAr(failed, 'صفحة') + '. أعد المحاولة عند اتصال أفضل.'
         : '✔ حُفظت صور الصفحات كلها (' + total + ').';
     }
 
@@ -3136,8 +3173,8 @@
       const list = document.getElementById('resultList');
       list.replaceChildren();
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + results.length + ' بنداً')
-        : results.length + ' نتيجة مطابقة';
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        : countAr(results.length, 'نتيجة');
 
       // computed BEFORE the empty state, deliberately: a bridge term like
       // «الأمر التغييري» returns nothing on its own, and that is exactly the
@@ -3150,13 +3187,13 @@
         const e = node('div', 'empty');
         e.append(
           node('h3', '', 'لم يتم العثور على مادة مطابقة'),
-          node('p', '', 'جرّب كتابة مصطلح قانوني أقصر أو استخدام كلمات البحث السريعة أعلى الصفحة.')
+          node('p', '', 'جرّب كلمة أقصر أو صيغة أخرى للمصطلح، أو اكتب «المادة» أو «ضوابط» ورقمها للانتقال إليها.')
         );
 
         const misses = missStore.read();
         if (misses.length) {
           const box = node('div', 'miss-box');
-          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + misses.length + ' استعلاماً لم يُرجع نتيجة. إرسالها إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
+          box.append(node('p', '', 'سُجِّل على هذا الجهاز ' + countAr(misses.length, 'استعلام') + ' بلا نتيجة. إرسالها إلى مُعِدّ الدليل يساعد على توسيع المرجع بما يطابق مفردات المستخدمين.'));
           const row = node('div', 'miss-actions');
           const copyBtn = node('button', 'btn-copy', '📋 نسخ الاستعلامات غير الموفقة');
           copyBtn.type = 'button';
@@ -3227,7 +3264,7 @@
         } else {
           const bar = node('div', 'concept-bar');
           bar.append(node('p', '',
-            'وهناك ' + loose.length + ' بنداً وردت فيها كلماتك متفرّقةً في مواضع مختلفة، لا كعبارة واحدة. ' +
+            'ووردت كلماتك متفرّقةً، لا كعبارة واحدة، في ' + countAr(loose.length, 'بند') + '. ' +
             'أكثرها ليس عن موضوعك، ولذلك أُخّرت.'));
           const show = node('button', 'btn-copy btn-quiet', 'أظهرها');
           show.type = 'button';
@@ -3239,8 +3276,8 @@
 
       if (jumpUnit && jumpUnit.focused) {
         const bar = node('div', 'concept-bar');
-        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو واحد من '
-          + jumpUnit.size + ' بنداً في ' + jumpUnit.article + '.'));
+        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود '
+          + jumpUnit.article + ' (' + countAr(jumpUnit.size, 'بند') + ').'));
         const all = node('button', 'btn-copy btn-quiet', 'اعرض ' + jumpUnit.article + ' كاملةً');
         all.type = 'button';
         const target = jumpUnit.article;
@@ -3265,7 +3302,7 @@
           const bar = node('div', 'concept-bar');
           bar.append(node('p', '',
             'يسمّي المستند هذا المفهوم أيضاً: ' + found.wordings.join('، ') +
-            ' — وفيها ' + found.extras.length + ' بنداً آخر لم يظهر في نتائجك.'));
+            ' — وتضيف ' + countAr(found.extras.length, 'بند') + ' إلى نتائجك.'));
           if (found.def.note) bar.append(node('p', 'concept-note', found.def.note));
           const add = node('button', 'btn-copy', '➕ أضِف هذه البنود');
           add.type = 'button';
@@ -3284,11 +3321,11 @@
         .concat(found && conceptAdded ? found.extras.map(x => x.clause) : []);
       const added = found && conceptAdded ? found.extras.length : 0;
       const parts = [];
-      if (exact.length) parts.push(exact.length + (phraseQuery ? ' نتيجة بالعبارة' : ' نتيجة مطابقة'));
+      if (exact.length) parts.push(countAr(exact.length, 'نتيجة') + (phraseQuery ? ' بالعبارة' : ''));
       if (loose.length) parts.push(loose.length + ' متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
       if (added) parts.push(added + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + results.length + ' بنداً')
+        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];

@@ -65,6 +65,8 @@ function assemble() {
   const chapters = readJson(path.join(SRC, 'chapters.json'));
   const annexes = readJson(path.join(SRC, 'annexes.json'));
   const meta = readJson(path.join(SRC, 'meta.json'));
+  // الصفحة تقارن الإصدارات رقماً رقماً (1.9 < 1.15)؛ صيغة أخرى تفسد المقارنة
+  if (!/^\d+(\.\d+)*$/.test(String(meta.version))) throw new Error('صيغة الإصدار يجب أن تكون أرقاماً ونقاطاً فقط، مثل 1.16');
   const concepts = readJson(path.join(SRC, 'concepts.json'));
 
   const integrity = fnv1a(JSON.stringify({ clauses, chapters, annexes, credit: meta.credit }));
