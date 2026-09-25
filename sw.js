@@ -22,17 +22,37 @@ const SHELL_FILES = [
 // addAll هي عملية كلّية: يُسقط فشلُ ملفٍ واحد التخزينَ كلَّه فلا يُحفظ شيء.
 // وذلك يقع فعلاً أثناء نشر GitHub، إذ يردّ ملفٌ 404 للحظة. نحفظ كلاً على
 // حدة، فيبقى ما نجح ولا يجرّه الفاشل معه.
+// لكن الصفحة نفسها شرطٌ لا يُتسامح فيه: عاملٌ جديد يُفعَّل بلا صفحته يحذف
+// هيكل الإصدار السابق الكامل (انظر activate) فلا يفتح الدليل بلا إنترنت.
+// ويجب أن تكون الصفحة من الإصدار نفسه: أثناء النشر قد يصل sw.js الجديد
+// والصفحة القديمة، فيُعلن الإصدار الجديد ولا يأتي به التحديث أبداً.
+// فشلُ التثبيت هنا يُبقي العامل القديم وهيكله، ويعيد المتصفح المحاولة لاحقاً.
+const REQUIRED = ['./', './index.html'];
+
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(SHELL);
     await Promise.all(SHELL_FILES.map(async f => {
-      try {
-        const res = await fetch(f, { cache: 'reload' });
-        if (res.ok) await c.put(f, res);
-      } catch (err) { /* يُعاد جلبه عند أول زيارة متصلة */ }
+      let res;
+      try { res = await fetch(f, { cache: 'reload' }); } catch (err) { res = null; }
+      const required = REQUIRED.includes(f);
+      if (!res || !res.ok) {
+        if (required) throw new Error('shell file unavailable: ' + f);
+        return;   // أيقونة ناقصة: يُعاد جلبها عند أول زيارة متصلة
+      }
+      if (required) {
+        const body = await res.clone().text();
+        if (!body.includes('"version": "' + VERSION + '"')) throw new Error('page is not version ' + VERSION);
+      }
+      await c.put(f, res);
     }));
     await self.skipWaiting();
   })());
+});
+
+// الصفحة تسأل العامل الذي يخدمها عن إصداره لتعرف إن كان أحدث منها
+self.addEventListener('message', e => {
+  if (e.data === 'version' && e.ports && e.ports[0]) e.ports[0].postMessage(VERSION);
 });
 
 self.addEventListener('activate', e => {
@@ -69,8 +89,10 @@ self.addEventListener('fetch', e => {
   }
 
   if (url.origin !== location.origin) return;
-  // الصفحة تقرأ sw.js لتعرف إصدار العامل الجديد؛ يجب أن يأتي من الشبكة دائماً
   if (url.pathname.endsWith('/sw.js')) return;
+  // طلبٌ صريح لنسخة جديدة (كزر «نزّل نسخة الملف») يذهب إلى الشبكة كما طلب،
+  // وإلا حفظ القارئُ نسخةً قديمة من المخزن وهو متصل
+  if (req.cache === 'no-store' || req.cache === 'reload') return;
 
   // صور الصفحات: من المخزن أولاً — فهي لا تتغير أبداً، وجلبها مرة يكفي
   if (/\/pages\/page-\d+\.jpg$/.test(url.pathname)) {

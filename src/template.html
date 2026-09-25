@@ -2590,24 +2590,30 @@
     // below never appears.
     const isWebCopy = location.protocol === 'https:' || location.protocol === 'http:';
     if (isWebCopy && 'serviceWorker' in navigator) {
-      // The worker changes only with a new version. It takes over at once
-      // (skipWaiting + claim), but this page is still the old one: offer a
-      // reload. A first install also changes the controller, from none -
-      // that is not an update, hence the check at load.
-      const hadController = !!navigator.serviceWorker.controller;
-      // Opened online, the page itself already came fresh from the network and
-      // the worker catches up a moment later - only a worker newer than this
-      // page means there is something to reload for.
-      navigator.serviceWorker.addEventListener('controllerchange', async () => {
-        if (!hadController) return;
-        try {
-          const src = await (await fetch('./sw.js', { cache: 'no-store' })).text();
-          const m = src.match(/const VERSION = '([^']+)'/);
-          if (m && m[1] !== data.version) showUpdateBar('🔄 يتوفر إصدار أحدث من الدليل (' + m[1] + ')', [], true);
-        } catch (e) { }
+      // A new version's worker takes over at once (skipWaiting + claim), but
+      // this page is still the old one: offer a reload. Only a worker whose version differs from this page's means there is
+      // something to reload for; ask the worker actually serving the page.
+      // Workers from before this check don't answer, and then nothing shows.
+      const askVersion = () => new Promise(resolve => {
+        const w = navigator.serviceWorker.controller;
+        if (!w) return resolve(null);
+        const ch = new MessageChannel();
+        ch.port1.onmessage = ev => resolve(ev.data);
+        w.postMessage('version', [ch.port2]);
+        setTimeout(() => resolve(null), 3000);
       });
+      const compareWorker = async () => {
+        const v = await askVersion();
+        if (typeof v === 'string' && v !== data.version) {
+          showUpdateBar('🔄 يتوفر إصدار أحدث من الدليل (' + v + ')', [], true);
+        }
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', compareWorker);
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then(reg => {
+          // the new worker may have taken over before the listener above
+          // existed; that change is never announced again, so look once now
+          compareWorker();
           // left open for days, or resumed from the background as an app,
           // the page would otherwise never look for a new version
           const check = () => { if (navigator.onLine !== false) reg.update().catch(() => { }); };
@@ -2748,7 +2754,11 @@
         dl.addEventListener('click', async e => {
           e.preventDefault();
           try {
-            const res = await fetch(location.href, { cache: 'no-store' });
+            // the newest copy when online; offline, the saved one still beats nothing
+            let res = null;
+            try { res = await fetch(location.href, { cache: 'no-store' }); } catch (err) { }
+            if (!res || !res.ok) res = await fetch(location.href);
+            if (!res.ok) throw new Error('download failed');
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2759,7 +2769,9 @@
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 2000);
           } catch (err) {
-            location.href = dl.href;
+            const label = dl.textContent;
+            dl.textContent = '⚠ تعذّر التنزيل، تحقّق من الاتصال وأعد المحاولة';
+            setTimeout(() => { dl.textContent = label; }, 4000);
           }
         });
       }
