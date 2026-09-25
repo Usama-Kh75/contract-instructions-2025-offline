@@ -69,6 +69,15 @@ function assemble() {
   if (!/^\d+(\.\d+)*$/.test(String(meta.version))) throw new Error('صيغة الإصدار يجب أن تكون أرقاماً ونقاطاً فقط، مثل 1.16');
   const concepts = readJson(path.join(SRC, 'concepts.json'));
 
+  // رقم أول مادة في كل فصل، بترتيب chapters.json. نطاق صفحات الفصل لا يكفي
+  // لمعرفة مواده: صفحته الأولى تحمل غالباً آخر مواد الفصل السابق قبل عنوانه.
+  // خارج البصمة كالمفاهيم: هو ترتيبٌ للتنقل لا نصٌّ رسمي.
+  const chapterStarts = readJson(path.join(SRC, 'chapter-articles.json'));
+  if (!Array.isArray(chapterStarts) || chapterStarts.length !== chapters.length ||
+      chapterStarts.some((n, i) => !Number.isInteger(n) || (i && n <= chapterStarts[i - 1]))) {
+    throw new Error('chapter-articles.json: يجب أن يكون ' + chapters.length + ' رقماً صحيحاً متزايداً، رقماً لكل فصل');
+  }
+
   const integrity = fnv1a(JSON.stringify({ clauses, chapters, annexes, credit: meta.credit }));
 
   // ترتيب المفاتيح هنا مقصود: تسلسل الجذر يدخل في البصمة المطبوعة على
@@ -85,6 +94,7 @@ function assemble() {
       credit: meta.credit,
       annexes,
       concepts,
+      chapterStarts,
       // ما الجديد في هذا الإصدار، يُعرض مرة واحدة بعد التحديث؛ خارج البصمة
       changes: Array.isArray(meta.changes) ? meta.changes : []
     },
