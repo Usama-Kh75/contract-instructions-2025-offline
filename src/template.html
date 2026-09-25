@@ -2681,6 +2681,10 @@
       if (mine !== offlineRender) return;
       if (!s) { el.textContent = ''; return; }
       el.classList.remove('ok', 'partial', 'bad');
+      // nothing left to save: the button goes, and returns by itself if the
+      // browser ever evicts the saved pages
+      const saveBtn = document.getElementById('offlineBtn');
+      if (saveBtn) saveBtn.hidden = s.active && s.shell && s.pages >= s.total;
       if ((!s.active || !s.shell) && s.installing) {
         el.classList.add('partial');
         el.textContent = '⏳ يجري حفظ البرنامج للعمل بلا إنترنت… أبقِ الصفحة مفتوحة لحظات.';
