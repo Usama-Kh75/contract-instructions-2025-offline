@@ -3167,28 +3167,30 @@
         active = !!(reg && reg.active);
         installing = reg ? !!(reg.installing || reg.waiting) : swPending;
       } catch (e) { }
-      let shell = false;
-      const seenPages = new Set();
-      try {
-        for (const name of await caches.keys()) {
-          const c = await caches.open(name);
-          if (/^(cic2025-)?shell-/.test(name) && !shell) {
-            shell = !!(await c.match('./index.html')) || !!(await c.match('./'));
-          }
-          // count distinct URLs across every pages-* cache: assigning per
-          // cache would let one version's count overwrite another's, and the
-          // answer would depend on the order the keys happen to come back in
-          if (/^(cic2025-)?pages-/.test(name)) {
-            for (const req of await c.keys()) seenPages.add(req.url);
-          }
-        }
-      } catch (e) { return null; }
+      // Look entries up with caches.match, never caches.open: open CREATES a
+      // cache that is missing. This ran while a new worker was deleting the
+      // old-named caches, reopened one it had just deleted, and left it behind
+      // empty — and it opened every other app's cache on the domain besides.
+      // (Found by tests/offline.test.js.)
+      let shell = false, pages = 0;
       // count the pages the clauses need, by name: the chapter viewer can
       // cache pages outside that set, and a raw count would then reach the
       // total while a needed page is still missing
       const need = [...new Set(data.clauses.map(c => c.pdfPage))]
         .map(p => new URL('./pages/page-' + p + '.jpg', location.href).href);
-      const pages = need.filter(u => seenPages.has(u)).length;
+      try {
+        for (const name of await caches.keys()) {
+          if (/^(cic2025-)?shell-/.test(name) && !shell) {
+            shell = !!(await caches.match('./index.html', { cacheName: name })) ||
+                    !!(await caches.match('./', { cacheName: name }));
+          }
+        }
+        // only the cache the worker serves pages from: a page anywhere else
+        // (an old-named cache not yet migrated) would count as saved and
+        // still fail to open offline
+        pages = (await Promise.all(need.map(u => caches.match(u, { cacheName: PAGES_CACHE }))))
+          .filter(Boolean).length;
+      } catch (e) { return null; }
       return { active, installing, shell, pages, total: need.length };
     }
 

@@ -12,15 +12,16 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # v5: the v4 actions run on Node 20, which GitHub is retiring
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - name: المخرجات مطابقة للمصادر، والبيانات سليمة
         run: npm run check
-      - name: اختبارات الواجهة (حاسوب وهاتف)
+      - name: اختبارات الواجهة (حاسوب وهاتف) والعمل بلا إنترنت والتحديث
         run: npm test
         env:
           CHROME_PATH: /usr/bin/google-chrome

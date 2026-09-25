@@ -2,7 +2,7 @@
    مُولَّد من src/sw.js؛ لا تحرّر الملف في الجذر. */
 'use strict';
 
-const VERSION = '1.23';
+const VERSION = '1.24';
 // المخازن مشتركة بين كل مشاريع النطاق usama-kh75.github.io؛ بلا بادئة خاصة
 // قد يحذف هذا العامل هيكلَ تطبيقٍ آخر على النطاق نفسه أو يخلط صوره بصوره
 const APP = 'cic2025';
@@ -35,11 +35,13 @@ const SHELL_FILES = [
 // وكانت تُنزَّل مرتين فيطول التثبيت الأول ويُثقل على بيانات الهاتف.
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
-    const c = await caches.open(SHELL);
     const page = await fetch('./index.html', { cache: 'reload' });
     if (!page.ok) throw new Error('page unavailable');
     const body = await page.clone().text();
     if (!body.includes('"version": "' + VERSION + '"')) throw new Error('page is not version ' + VERSION);
+    // المخزن يُفتح بعد التحقق لا قبله: فتحه يُنشئه، وتثبيتٌ يُرفض أثناء النشر
+    // كان يترك مخزناً فارغاً باسم الإصدار الجديد (كشفه اختبار tests/offline)
+    const c = await caches.open(SHELL);
     await c.put('./index.html', page.clone());
     await c.put('./', page);
     // أيقونة تعذّر جلبها تُؤخذ من هيكل الإصدار السابق (ما زال موجوداً حتى

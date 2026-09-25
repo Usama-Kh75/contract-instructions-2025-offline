@@ -5,7 +5,7 @@
   "scripts": {
     "build": "node build.js",
     "check": "node build.js --check && node validate.js",
-    "test": "node tests/ui.test.js",
+    "test": "node tests/ui.test.js && node tests/offline.test.js",
     "verify": "npm run check && npm test"
   },
   "devDependencies": {
