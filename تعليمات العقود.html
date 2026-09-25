@@ -550,7 +550,7 @@
       padding: 32px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      min-width: 0;
       border-left: 1px solid var(--card-border);
     }
 
@@ -586,6 +586,92 @@
       font-weight: 600;
       color: var(--text-subtle);
       line-height: 1.5;
+    }
+
+    /* «في هذه الصفحة»: the clauses printed on the page shown beside it */
+    .page-index { margin-top: 4px; }
+
+    .page-index-title {
+      list-style: none;
+      cursor: default;
+      margin-bottom: 10px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 900;
+    }
+    .page-index-title::-webkit-details-marker { display: none; }
+
+    .page-index-list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-inline-end: 4px;
+    }
+
+    .pi-article {
+      margin: 10px 2px 4px;
+      color: var(--gold-text);
+      font-size: 0.75rem;
+      font-weight: 900;
+    }
+    .pi-article:first-child { margin-top: 0; }
+
+    .pi-item {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      width: 100%;
+      text-align: right;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-main);
+      font: inherit;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .pi-item:hover, .pi-item:focus-visible {
+      background: var(--mint);
+      border-color: var(--mint-border);
+    }
+    .pi-num {
+      flex-shrink: 0;
+      min-width: 58px;
+      color: var(--mint-text);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+    .pi-title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .pi-note {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin: 0 2px 6px;
+    }
+
+    /* the wave: each line arrives a beat after the one above it, once per
+       page turn — then everything is still, so it never competes with reading */
+    .page-index-list > * {
+      animation: pi-in 0.32s ease-out both;
+      animation-delay: calc(min(var(--i, 0), 12) * 35ms);
+    }
+    @keyframes pi-in {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .page-index-list > * { animation: none; }
     }
 
     /* the page and its pager: one column, pager directly under the page */
@@ -1642,7 +1728,25 @@
       .chapter-info {
         border-left: none;
         border-bottom: 1px solid var(--card-border);
+        padding: 20px;
       }
+      .chapter-info .pills { margin-bottom: 14px; }
+      /* folded here: a long list would push the page itself off the screen */
+      .page-index-title {
+        cursor: pointer;
+        margin-bottom: 0;
+        padding: 12px 14px;
+        border: 1px solid var(--card-border);
+        border-radius: var(--radius-sm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--text-main);
+      }
+      .page-index-title::after { content: '▾'; transition: transform 0.2s ease; }
+      .page-index[open] .page-index-title::after { transform: rotate(180deg); }
+      .page-index[open] .page-index-list { margin-top: 8px; max-height: none; }
       .workspace.visible {
         grid-template-columns: 1fr;
       }
@@ -1775,6 +1879,12 @@
               <span class="pill" id="chapterPrinted"></span>
             </div>
           </div>
+          <!-- what the scan beside it contains, as text the reader can click:
+               folded on a phone so the page itself stays near the top -->
+          <details class="page-index" id="pageIndex">
+            <summary class="page-index-title" id="pageIndexTitle"></summary>
+            <div class="page-index-list" id="pageIndexList"></div>
+          </details>
         </div>
 
         <!-- The page and the pager that turns it sit together, in one column:
@@ -25189,7 +25299,7 @@
     }
   ],
   "integrity": "65cbfea4",
-  "version": "1.16",
+  "version": "1.17",
   "releaseDate": "2026-09-25",
   "credit": "إعداد م. أسامة خليل هاشم",
   "annexes": [
@@ -25462,6 +25572,7 @@
     }
   ],
   "changes": [
+    "بجانب صورة الصفحة قائمة «في هذه الصفحة» ببنودها، واضغط أي بند لفتح شرحه.",
     "اضغط صورة الصفحة لتكبيرها، وأزرار التقليب صارت تحتها مباشرة.",
     "في نافذة العرض: نقرتان على الصفحة تكبّرانها عند موضع النقر، ويمكن سحبها بالفأرة أو التكبير بـ Ctrl مع عجلة الفأرة.",
     "على الهاتف: أزرار نافذة العرض في شريط أسفل الشاشة قريب من الإبهام."
@@ -26937,7 +27048,8 @@
 
     // jump straight to a unit rather than searching its name, which would
     // return every clause that merely mentions it
-    function showArticle(target, focusId) {
+    // fromPage: the printed page whose «في هذه الصفحة» list opened it
+    function showArticle(target, focusId, fromPage) {
       const list = articleIndex.get(target);
       if (!list || !list.length) return;
       lastQuery = '';
@@ -26950,7 +27062,7 @@
       results = focused ? [focused] : list.slice();
       shownResults = results;
       selectedId = results[0].id;
-      jumpUnit = { article: target, focused: !!focused, size: list.length };
+      jumpUnit = { article: target, focused: !!focused, size: list.length, fromPage: focused ? fromPage || null : null };
       document.getElementById('queryTitle').textContent =
         '«' + target + (focused ? ' / ' + focused.clause : '') + '»';
       document.getElementById('chapters').style.display = 'none';
@@ -26967,7 +27079,7 @@
       const list = document.getElementById('resultList');
       list.replaceChildren();
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? (jumpUnit.fromPage ? 'بندٌ من الصفحة المطبوعة ' + jumpUnit.fromPage : 'بندٌ محال إليه') :jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : countAr(results.length, 'نتيجة');
 
       // computed BEFORE the empty state, deliberately: a bridge term like
@@ -27070,8 +27182,21 @@
 
       if (jumpUnit && jumpUnit.focused) {
         const bar = node('div', 'concept-bar');
-        bar.append(node('p', '', 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود '
+        const fromPage = jumpUnit.fromPage;
+        bar.append(node('p', '', (fromPage
+          ? 'فتحتَ هذا البند من فهرس الصفحة المطبوعة ' + fromPage + '. وهو أحد بنود '
+          : 'وصلتَ إلى هذا البند من إحالةٍ داخل النص. وهو أحد بنود ')
           + jumpUnit.article + ' (' + countAr(jumpUnit.size, 'بند') + ').'));
+        if (fromPage) {
+          // the page the reader came from is kept as it was; this returns to it
+          const back = node('button', 'btn-copy', '↩ العودة إلى الصفحة ' + fromPage);
+          back.type = 'button';
+          back.addEventListener('click', () => {
+            showChapters();
+            document.getElementById('chapters').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+          bar.append(back);
+        }
         const all = node('button', 'btn-copy btn-quiet', 'اعرض ' + jumpUnit.article + ' كاملةً');
         all.type = 'button';
         const target = jumpUnit.article;
@@ -27119,7 +27244,7 @@
       if (loose.length) parts.push(countAr(loose.length, 'نتيجة') + ' بكلمات متفرّقة' + (looseShown ? '' : ' (مطويّة)'));
       if (added) parts.push(countAr(added, 'نتيجة') + ' بصيغ أخرى');
       document.getElementById('resultCount').textContent = jumpUnit
-        ? (jumpUnit.focused ? 'بندٌ محال إليه' : jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
+        ? (jumpUnit.focused ? (jumpUnit.fromPage ? 'بندٌ من الصفحة المطبوعة ' + jumpUnit.fromPage : 'بندٌ محال إليه') :jumpUnit.article + ' — ' + countAr(results.length, 'بند'))
         : (parts.length ? parts.join('  ·  ') : 'لا نتيجة بهذه الصيغة');
 
       const selected = shownResults.find(c => c.id === selectedId) || shownResults[0];
@@ -27299,6 +27424,7 @@
       // the position in the whole document read as a second «X من Y» beside
       // the first; the printed page above is the reference readers cite
       document.getElementById('pageCount').textContent = 'صفحة ' + pos + ' من ' + total;
+      renderPageIndex(chapterPage, Number(c.printedPage) + offset);
       document.getElementById('prevPage').disabled = chapterPage <= DOC_FIRST;
       document.getElementById('nextPage').disabled = chapterPage >= DOC_LAST;
 
@@ -27328,6 +27454,61 @@
     // one page can fall in two sections where they overlap; the first wins,
     // which keeps forward paging monotonic
     const sectionFor = page => SECTIONS.find(s => page >= s.from && page <= s.to) || null;
+
+    // «في هذه الصفحة». On a wide screen the column beside the scan stood
+    // empty; every clause records the page it starts on, so that column now
+    // lists what the scan contains — as text, each line opening its clause.
+    const clausesByPage = new Map();
+    data.clauses.forEach(c => {
+      const p = Number(c.pdfPage);
+      if (!clausesByPage.has(p)) clausesByPage.set(p, []);
+      clausesByPage.get(p).push(c);
+    });
+    const pageIndexEl = document.getElementById('pageIndex');
+    const pageIndexTitle = document.getElementById('pageIndexTitle');
+    const pageIndexList = document.getElementById('pageIndexList');
+    const phoneLayout = window.matchMedia('(max-width: 980px)');
+    let pageIndexShown = null;
+
+    // open and fixed beside the page on a wide screen; folded on a phone,
+    // where a long list would push the page itself out of sight
+    function syncPageIndexMode() {
+      pageIndexEl.open = !phoneLayout.matches;
+      pageIndexTitle.tabIndex = phoneLayout.matches ? 0 : -1;
+    }
+    syncPageIndexMode();
+    if (phoneLayout.addEventListener) phoneLayout.addEventListener('change', syncPageIndexMode);
+    pageIndexTitle.addEventListener('click', e => { if (!phoneLayout.matches) e.preventDefault(); });
+
+    function renderPageIndex(pdfPage, printed) {
+      // rebuilt only when the page changes: rebuilding replays the wave
+      if (pageIndexShown === pdfPage) return;
+      pageIndexShown = pdfPage;
+      pageIndexList.replaceChildren();
+      let i = 0;
+      const add = el => { el.style.setProperty('--i', i++); pageIndexList.append(el); };
+      const item = c => {
+        const b = node('button', 'pi-item');
+        b.type = 'button';
+        b.append(node('span', 'pi-num', c.clause), node('span', 'pi-title', c.title));
+        b.addEventListener('click', () => showArticle(c.article, c.id, printed));
+        return b;
+      };
+      const here = clausesByPage.get(pdfPage) || [];
+      if (!here.length) {
+        // no guessing which clause this page continues: the data records
+        // where a clause starts, not where it ends, so a guess could be wrong
+        pageIndexTitle.textContent = 'في هذه الصفحة';
+        add(node('p', 'pi-note', 'لا يبدأ في هذه الصفحة بندٌ جديد.'));
+        return;
+      }
+      pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(here.length, 'بند');
+      let article = null;
+      here.forEach(c => {
+        if (c.article !== article) { article = c.article; add(node('div', 'pi-article', article)); }
+        add(item(c));
+      });
+    }
 
     function stepPage(d) {
       const t = chapterPage + d;
