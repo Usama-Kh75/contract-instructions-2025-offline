@@ -835,17 +835,46 @@
     }
     .back-inline:hover, .back-inline:focus-visible { background: var(--primary-glow); }
 
-    .nav-back {
+    /* The ways back float at the bottom, in reach wherever the reader has
+       scrolled to: «قائمة الفصول» used to sit in the top corner, and on a
+       phone the thumb had to travel the whole screen, or scroll up, to find
+       it. The trail pill joins it here when a cross-reference was followed. */
+    .float-dock {
       position: fixed;
       inset-inline: 0;
       bottom: 16px;
       z-index: 900;
       display: flex;
       justify-content: center;
-      padding: 0 16px;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
       pointer-events: none;
     }
+    /* one row always: the trail pill gives up width (its label ends in «…»)
+       rather than pushing «الفصول» onto a second row over the text */
+    .nav-back { display: flex; flex: 0 1 auto; min-width: 0; }
+    .dock-index { flex-shrink: 0; }
+    @media (max-width: 640px) { .dock-long { display: none; } }
     .nav-back[hidden] { display: none; }
+    .dock-index {
+      pointer-events: auto;
+      padding: 10px 18px;
+      border: 1.5px solid var(--primary);
+      border-radius: 50px;
+      background: var(--card-bg);
+      color: var(--primary);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
+      white-space: nowrap;
+    }
+    .dock-index[hidden] { display: none; }
+    .dock-index:hover, .dock-index:focus-visible { background: var(--mint); }
+    /* room at the end of the page, so the dock never sits on the last lines */
+    body:has(.float-dock > :not([hidden])) { padding-bottom: 72px; }
     .nav-back button {
       pointer-events: auto;
       max-width: 100%;
@@ -1633,7 +1662,7 @@
 
     /* Toast Notification */
     /* the back pill sits where the toast would land; lift the toast over it */
-    .nav-back:not([hidden]) ~ .toast { bottom: 84px; }
+    .float-dock:has(> :not([hidden])) ~ .toast { bottom: 84px; }
 
     .toast {
       position: fixed;
@@ -1649,6 +1678,9 @@
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
       z-index: 2000;
       opacity: 0;
+      /* invisible while idle, yet it still lay over the bottom of the screen
+         and swallowed taps meant for the floating buttons beneath it */
+      pointer-events: none;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       display: flex;
       align-items: center;
@@ -1816,9 +1848,7 @@
       </div>
       <div class="topbar-end">
         <span class="credit-badge" id="creditText">إعداد م. أسامة خليل هاشم</span>
-        <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>
-        <button class="btn-action" id="indexButton" type="button" style="display: none;">↩ الفهرس العام</button>
-      </div>
+        <button class="btn-action theme-btn" id="themeToggle" type="button" title="تبديل الوضع الليلي/النهاري">🌓</button>      </div>
     </div>
   </header>
 
@@ -1930,9 +1960,14 @@
 
   </main>
 
-  <!-- the way back after following a cross-reference -->
-  <div class="nav-back" id="navBack" hidden>
-    <button type="button" id="navBackBtn"></button>
+  <div class="float-dock">
+    <!-- the way back after following a cross-reference -->
+    <div class="nav-back" id="navBack" hidden>
+      <button type="button" id="navBackBtn"></button>
+    </div>
+    <!-- «الفهرس العام» named a thing readers don't call it; the list they
+         return to is the chapters and annexes they browse -->
+    <button type="button" class="dock-index" id="indexButton" title="العودة إلى قائمة الفصول والضوابط" aria-label="قائمة الفصول" hidden>📑 <span class="dock-long">قائمة </span>الفصول</button>
   </div>
 
   <!-- Lightbox Modal for Zooming Scanned Pages -->
@@ -3482,7 +3517,7 @@
         '«' + target + (focused ? ' / ' + focused.clause : '') + '»';
       document.getElementById('chapters').style.display = 'none';
       document.getElementById('workspace').classList.add('visible');
-      indexBtn.style.display = 'inline-flex';
+      indexBtn.hidden = false;
       searchInput.value = '';
       clearSearchBtn.style.display = 'none';
       renderResults();
@@ -3994,7 +4029,7 @@
       selectedId = null;
       document.getElementById('workspace').classList.remove('visible');
       document.getElementById('chapters').style.display = 'block';
-      indexBtn.style.display = 'none';
+      indexBtn.hidden = true;
     }
 
     function performSearch(val) {
@@ -4021,7 +4056,7 @@
       document.getElementById('queryTitle').textContent = '«' + value + '»';
       document.getElementById('chapters').style.display = 'none';
       document.getElementById('workspace').classList.add('visible');
-      indexBtn.style.display = 'inline-flex';
+      indexBtn.hidden = false;
       renderResults();
       document.getElementById('workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -4050,7 +4085,7 @@
       showChapters();
       document.getElementById('chapters').scrollIntoView({ behavior: 'smooth' });
     });
-    indexBtn.style.display = 'none';
+    indexBtn.hidden = true;
 
   </script>
 </body>
