@@ -760,6 +760,50 @@
     }
     .nav-back button:hover, .nav-back button:focus-visible { filter: brightness(1.12); }
 
+    /* "updated to version X" once after an update, or "a newer version is
+       ready" while the page is open */
+    .update-bar {
+      position: fixed;
+      top: 12px;
+      inset-inline: 0;
+      z-index: 950;
+      display: flex;
+      justify-content: center;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+    .update-bar[hidden] { display: none; }
+    .update-box {
+      pointer-events: auto;
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--mint);
+      border: 1px solid var(--mint-border);
+      color: var(--text-main);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    }
+    .update-body { flex: 1; min-width: 0; }
+    .update-body strong { display: block; color: var(--mint-text); font-size: 0.95rem; }
+    .update-body ul { margin: 6px 0 0; padding-inline-start: 20px; font-size: 0.85rem; line-height: 1.7; color: var(--text-muted); }
+    .update-body ul:empty { display: none; }
+    .update-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .update-actions button {
+      font: inherit;
+      font-weight: 800;
+      font-size: 0.82rem;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 6px 12px;
+    }
+    #updateReload { background: var(--primary); color: #fff; border: none; }
+    #updateReload[hidden] { display: none; }
+    #updateClose { background: transparent; border: 1px solid var(--mint-border); color: var(--text-muted); }
+
     /* Search Results Workspace */
     .workspace {
       display: none;
@@ -1580,6 +1624,19 @@
   </style>
 </head>
 <body>
+
+  <div class="update-bar" id="updateBar" hidden role="status">
+    <div class="update-box">
+      <div class="update-body">
+        <strong id="updateTitle"></strong>
+        <ul id="updateList"></ul>
+      </div>
+      <div class="update-actions">
+        <button type="button" id="updateReload" hidden>تحديث الآن</button>
+        <button type="button" id="updateClose" aria-label="إغلاق">✕</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Topbar -->
   <header class="topbar">
@@ -25335,6 +25392,11 @@
       ],
       "note": "صيغة الجمع المعرّف «الغرامات التأخيرية» وصيغة المفرد النكرة «غرامة تأخيرية» لا تتطابقان حرفياً في البحث (اللاحقة ـات مقابل ـة)، فتوجد 13 بنداً لا يصل إليها الباحث بإحدى الصيغتين إن اقتصر عليها — منها بند متابعة الشحن الكمركي (المادة 24 / سابعاً) الذي يستعمل الصيغة المفردة وحدها."
     }
+  ],
+  "changes": [
+    "زر للعودة إلى المادة الأصلية بعد الانتقال إلى مادة محال إليها.",
+    "تثبيت الدليل كتطبيق على الهاتف والحاسوب، وحفظ صور الصفحات للعمل بلا إنترنت.",
+    "تنزيل نسخة من الملف إلى الحاسوب."
   ]
 }</script>
 
@@ -25459,6 +25521,47 @@
       if (ver) parts.push('إصدار الدليل ' + ver);
       if (rel) parts.push('بتاريخ ' + rel);
       stampEl.textContent = parts.join(' — ');
+    }
+
+    // --- Update notices ---
+    // A legal reference must say when its text or tools changed, so the first
+    // opening after a version bump says so once, with what changed. UI-only
+    // releases keep the version and stay silent on purpose.
+    const updateBar = document.getElementById('updateBar');
+    function showUpdateBar(title, items, offerReload) {
+      document.getElementById('updateTitle').textContent = title;
+      const ul = document.getElementById('updateList');
+      ul.replaceChildren(...items.map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+      document.getElementById('updateReload').hidden = !offerReload;
+      updateBar.hidden = false;
+    }
+    document.getElementById('updateClose').addEventListener('click', () => { updateBar.hidden = true; });
+    document.getElementById('updateReload').addEventListener('click', () => location.reload());
+
+    {
+      const newer = (a, b) => {
+        const x = a.split('.').map(Number), y = b.split('.').map(Number);
+        for (let i = 0; i < Math.max(x.length, y.length); i++) {
+          const d = (x[i] || 0) - (y[i] || 0);
+          if (d) return d > 0;
+        }
+        return false;
+      };
+      const KEY = 'lastSeenVersion';
+      const ver = typeof data.version === 'string' ? data.version : '';
+      let seen = null;
+      try { seen = localStorage.getItem(KEY); } catch (e) { }
+      if (ver) {
+        // a first visit has nothing to compare with: record, say nothing
+        if (seen && newer(ver, seen)) {
+          const rel = typeof data.releaseDate === 'string' ? ' (' + data.releaseDate + ')' : '';
+          const items = Array.isArray(data.changes) ? data.changes.filter(t => typeof t === 'string') : [];
+          showUpdateBar('✔ تم تحديث الدليل إلى الإصدار ' + ver + rel, items, false);
+        }
+        // never step back: an older saved copy opened later must not make the
+        // current one announce itself again
+        if (!seen || newer(ver, seen)) { try { localStorage.setItem(KEY, ver); } catch (e) { } }
+      }
     }
 
     // --- Dark Mode / Light Mode Theme Toggle ---
@@ -26073,8 +26176,30 @@
     // below never appears.
     const isWebCopy = location.protocol === 'https:' || location.protocol === 'http:';
     if (isWebCopy && 'serviceWorker' in navigator) {
+      // The worker changes only with a new version. It takes over at once
+      // (skipWaiting + claim), but this page is still the old one: offer a
+      // reload. A first install also changes the controller, from none -
+      // that is not an update, hence the check at load.
+      const hadController = !!navigator.serviceWorker.controller;
+      // Opened online, the page itself already came fresh from the network and
+      // the worker catches up a moment later - only a worker newer than this
+      // page means there is something to reload for.
+      navigator.serviceWorker.addEventListener('controllerchange', async () => {
+        if (!hadController) return;
+        try {
+          const src = await (await fetch('./sw.js', { cache: 'no-store' })).text();
+          const m = src.match(/const VERSION = '([^']+)'/);
+          if (m && m[1] !== data.version) showUpdateBar('🔄 يتوفر إصدار أحدث من الدليل (' + m[1] + ')', [], true);
+        } catch (e) { }
+      });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => { });
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          // left open for days, or resumed from the background as an app,
+          // the page would otherwise never look for a new version
+          const check = () => { if (navigator.onLine !== false) reg.update().catch(() => { }); };
+          setInterval(check, 60 * 60 * 1000);
+          document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+        }).catch(() => { });
       });
     }
 

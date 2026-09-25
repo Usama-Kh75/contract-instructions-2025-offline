@@ -82,7 +82,9 @@ function assemble() {
       releaseDate: meta.releaseDate,
       credit: meta.credit,
       annexes,
-      concepts
+      concepts,
+      // ما الجديد في هذا الإصدار، يُعرض مرة واحدة بعد التحديث؛ خارج البصمة
+      changes: Array.isArray(meta.changes) ? meta.changes : []
     },
     integrity
   };
