@@ -742,7 +742,6 @@
     }
     .quote-btns { display: flex; flex-wrap: wrap; gap: 6px; }
 
-    .pi-fold { margin: 2px 0 8px; }
     .pi-others {
       width: 100%;
       text-align: right;
@@ -758,7 +757,6 @@
       cursor: pointer;
     }
     .pi-others:hover, .pi-others:focus-visible { border-color: var(--mint-border); color: var(--text-main); }
-    .pi-fold-body { margin-top: 6px; opacity: 0.85; }
 
     .pi-note {
       color: var(--text-muted);
@@ -2836,8 +2834,12 @@
       // a new page is read from its top, which in Arabic is the top-right
       lightboxBody.scrollTo(0, 0);
       // keep the screen behind in step, so closing lands where the reader is
-      const sec = sectionFor(t);
-      if (sec) { selectedKind = sec.kind; selectedChapter = sec.number; chapterPage = t; renderChapter(); }
+      // the chosen chapter holds while the page is still its own
+      const cur = currentSection();
+      const sec = (t >= cur.pdfPage && t <= sectionEnd(selectedKind, cur)) ? null : sectionFor(t);
+      if (sec) { selectedKind = sec.kind; selectedChapter = sec.number; }
+      chapterPage = t;
+      renderChapter();
       syncLightboxPager();
     }
 
@@ -4156,7 +4158,7 @@
       const c = currentSection();
       const isAnnex = selectedKind === 'annex';
       const label = isAnnex ? 'ضوابط رقم (' + c.number + ')' : 'الفصل ' + c.number;
-      const end = c.endPage || c.pdfPage;
+      const end = sectionEnd(selectedKind, c);
       if (chapterPage < c.pdfPage || chapterPage > end) chapterPage = c.pdfPage;
 
       document.querySelectorAll('.chapter-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.number) === c.number && b.dataset.kind === selectedKind));
@@ -4173,8 +4175,9 @@
       // the first; the printed page above is the reference readers cite
       document.getElementById('pageCount').textContent = 'صفحة ' + pos + ' من ' + total;
       renderPageIndex(chapterPage);
-      document.getElementById('prevPage').disabled = chapterPage <= DOC_FIRST;
-      document.getElementById('nextPage').disabled = chapterPage >= DOC_LAST;
+      const si = sectionIndex();
+      document.getElementById('prevPage').disabled = si <= 0 && chapterPage <= c.pdfPage;
+      document.getElementById('nextPage').disabled = si === SECTIONS.length - 1 && chapterPage >= end;
 
       const src = './pages/page-' + chapterPage + '.jpg';
       const imgEl = document.getElementById('chapterImage');
@@ -4255,6 +4258,20 @@
       const [kind, num] = key.split(':');
       return kind === 'annex' ? 'ضوابط رقم (' + num + ')' : 'الفصل ' + num;
     };
+
+    // A section's last page as its clauses place it. chapters.json stops a
+    // range where the next heading starts, yet the last clause often sits on
+    // that page: «ثالثاً» of chapter 14 is printed on page 37, where chapter
+    // 15 opens. The list shows the chosen chapter only, so a range stopping
+    // at 36 would lose that clause altogether.
+    const lastClausePage = new Map();
+    data.clauses.forEach(c => {
+      const k = sectionKeyOf(c);
+      if (k) lastClausePage.set(k, Math.max(lastClausePage.get(k) || 0, Number(c.pdfPage)));
+    });
+    SECTIONS.forEach(s => { s.end = Math.max(s.to, lastClausePage.get(s.kind + ':' + s.number) || 0); });
+    const sectionEnd = (kind, x) => Math.max(x.endPage || x.pdfPage, lastClausePage.get(kind + ':' + x.number) || 0);
+    const sectionIndex = () => SECTIONS.findIndex(s => s.kind === selectedKind && s.number === selectedChapter);
 
     // A clause's branches often run onto the next page: «أولاً: المناقصة
     // المحدودة» is on printed page 9, its «أ» and «ب» on page 10. Opened on
@@ -4337,7 +4354,9 @@
     // go to a clause's page and open it in the list there
     function openClauseAt(x) {
       const p = Number(x.pdfPage);
-      const sec = sectionFor(p);
+      // the clause's own chapter, not whichever one owns the page by range
+      const k = sectionKeyOf(x);
+      const sec = (k && SECTIONS.find(s => s.kind + ':' + s.number === k)) || sectionFor(p);
       if (!sec) return;
       selectedKind = sec.kind;
       selectedChapter = sec.number;
@@ -4346,8 +4365,6 @@
       pageIndexEl.open = true;   // folded on a phone
       const entry = [...pageIndexList.querySelectorAll('.pi-entry')].find(e => e.dataset.id === String(x.id));
       if (!entry) return;
-      const fold = entry.closest('.pi-fold-body');
-      if (fold && fold.hidden) fold.previousElementSibling.click();
       const b = entry.querySelector('.pi-item');
       if (b.getAttribute('aria-expanded') !== 'true') b.click();
       b.focus({ preventScroll: true });
@@ -4410,13 +4427,19 @@
       // button: «التالية» under the scan already turns the page.
       const sec = currentSection();
       const continues = () => {
-        if (pdfPage >= (sec.endPage || sec.pdfPage)) return;
+        if (pdfPage >= sectionEnd(selectedKind, sec)) return;
         const next = (Number(sec.printedPage) - Number(sec.pdfPage)) + pdfPage + 1;
         const verb = selectedKind === 'annex' ? 'تستمر ' : 'يستمر ';
         add(node('p', 'pi-note pi-continues', '↓ ' + verb + sectionName(selectedKind + ':' + selectedChapter) + ' في الصفحة التالية (' + next + ').'));
       };
-      const here = clausesByPage.get(pdfPage) || [];
-      if (!here.length) {
+
+      // The chosen chapter only. The reader came for a subject, not a sheet
+      // of paper: on page 37 the end of chapter 14 (contract variations) has
+      // nothing to do with chapter 15 (late-delivery penalties), and a line
+      // offering it read as part of the answer. The scan still shows it all.
+      const current = selectedKind + ':' + selectedChapter;
+      const mine = (clausesByPage.get(pdfPage) || []).filter(c => { const k = sectionKeyOf(c); return k === null || k === current; });
+      if (!mine.length) {
         // no guessing which clause this page continues: the data records
         // where a clause starts, not where it ends, so a guess could be wrong
         pageIndexTitle.textContent = 'في هذه الصفحة';
@@ -4424,84 +4447,35 @@
         continues();
         return;
       }
-      const groupInto = (list, target) => {
-        let article = null;
-        list.forEach(c => {
-          if (c.article !== article) { article = c.article; target(node('div', 'pi-article', article)); }
-          target(item(c));
-        });
-      };
+      pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(mine.length, 'بند');
+      let article = null;
+      mine.forEach(c => {
+        if (c.article !== article) { article = c.article; add(node('div', 'pi-article', article)); }
+        add(item(c));
+      });
+      continues();
+    }
 
-      // The chapter the reader chose comes first and in full. Clauses of a
-      // neighbouring chapter that share the page are folded into one quiet
-      // line, above or below where they sit on the page: choosing chapter 7
-      // used to open on nine clauses of chapter 6, the one wanted last.
-      const current = selectedKind + ':' + selectedChapter;
-      const mine = here.filter(c => { const k = sectionKeyOf(c); return k === null || k === current; });
-      if (!mine.length) {
-        pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(here.length, 'بند');
-        groupInto(here, add);
-        continues();
+    // Paging follows the subject. Past the chosen section's last page it
+    // moves into the neighbouring section, which may open on this very page
+    // (chapter 15 starts where chapter 14 ends): the scan stays, the list and
+    // heading change to the new chapter, so neither end is skipped.
+    function stepPage(d) {
+      const c = currentSection();
+      const end = sectionEnd(selectedKind, c);
+      const t = chapterPage + d;
+      if (t >= c.pdfPage && t <= end) {
+        chapterPage = t;
+        renderChapter();
         return;
       }
-      pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(mine.length, 'بند');
-      const firstMine = here.indexOf(mine[0]);
-      const others = here.filter(c => !mine.includes(c));
-      const before = others.filter(c => here.indexOf(c) < firstMine);
-      const after = others.filter(c => here.indexOf(c) > firstMine);
-
-      const folded = (list, where) => {
-        if (!list.length) return;
-        const wrap = node('div', 'pi-fold');
-        const btn = node('button', 'pi-others',
-          '＋ ' + countAr(list.length, 'بند') + ' من ' + sectionName(sectionKeyOf(list[0])) + ' ' + where);
-        btn.type = 'button';
-        btn.setAttribute('aria-expanded', 'false');
-        const box = node('div', 'pi-fold-body');
-        box.hidden = true;
-        groupInto(list, el => box.append(el));
-        btn.addEventListener('click', () => {
-          const open = box.hidden;
-          box.hidden = !open;
-          btn.setAttribute('aria-expanded', String(open));
-          btn.textContent = (open ? '－ ' : '＋ ') + btn.textContent.slice(2);
-        });
-        wrap.append(btn, box);
-        add(wrap);
-      };
-
-      // one fold per neighbouring section: page 35 holds the ends of three
-      // chapters, and one line naming only the first would hide the others
-      const bySection = list => {
-        const runs = [];
-        list.forEach(c => {
-          const k = sectionKeyOf(c);
-          if (runs.length && runs[runs.length - 1].k === k) runs[runs.length - 1].items.push(c);
-          else runs.push({ k, items: [c] });
-        });
-        return runs.map(r => r.items);
-      };
-      bySection(before).forEach(l => folded(l, 'في أعلى الصفحة'));
-      groupInto(mine, add);
-      continues();
-      bySection(after).forEach(l => folded(l, 'في أسفل الصفحة'));
-    }
-
-    function stepPage(d) {
-      const t = chapterPage + d;
-      if (t < DOC_FIRST || t > DOC_LAST) return;
-      const c = currentSection();
-      const end = c.endPage || c.pdfPage;
-      if (t < c.pdfPage || t > end) {
-        const next = sectionFor(t);
-        if (!next) return;
-        selectedKind = next.kind;
-        selectedChapter = next.number;
-      }
-      chapterPage = t;
+      const s = SECTIONS[sectionIndex() + d];
+      if (!s) return;
+      selectedKind = s.kind;
+      selectedChapter = s.number;
+      chapterPage = d > 0 ? Math.max(s.from, chapterPage) : Math.min(s.end, chapterPage);
       renderChapter();
     }
-
     document.getElementById('prevPage').addEventListener('click', () => stepPage(-1));
     document.getElementById('nextPage').addEventListener('click', () => stepPage(1));
 

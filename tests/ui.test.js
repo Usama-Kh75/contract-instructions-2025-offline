@@ -64,7 +64,8 @@ async function run(dev, browser) {
   const pg = await openPage(browser, dev, errors);
 
   // شاشة الفصل
-  check('العدّاد «صفحة 1 من 4»', await pg.$eval('#pageCount', e => e.textContent) === 'صفحة 1 من 4');
+  // الفصل 1: الصفحات 7–10 ومعها تكملته في الصفحة 11 حيث يبدأ الفصل 2
+  check('العدّاد «صفحة 1 من 5»', await pg.$eval('#pageCount', e => e.textContent) === 'صفحة 1 من 5');
   check('صورة الصفحة زرّ حقيقي', await pg.$eval('#chapterImagePane', e => e.tagName === 'BUTTON' && !!e.getAttribute('aria-label')));
   check('فهرس الصفحة ' + (dev.phone ? 'مطويّ' : 'مفتوح'), await pg.$eval('#pageIndex', e => e.open) === !dev.phone);
 
@@ -113,21 +114,45 @@ async function run(dev, browser) {
   const idx = await pg.evaluate(() => ({
     title: pageIndexTitle.textContent,
     arts: [...document.querySelectorAll('#pageIndexList > .pi-article')].map(x => x.textContent),
-    fold: (document.querySelector('.pi-others') || {}).textContent || ''
+    folds: document.querySelectorAll('#pageIndexList > .pi-others, #pageIndexList .pi-fold').length
   }));
   check('الفصل 7 يبدأ بالمادة (16)', idx.arts.join() === 'المادة (16)', idx);
-  check('بنود الفصل 6 مطويّة في سطر', /من الفصل 6 في أعلى الصفحة/.test(idx.fold), idx.fold);
+  check('بنود الفصل 6 لا تظهر مع الفصل 7', idx.folds === 0, idx);
 
   // الفصل 15 يبدأ آخر الصفحة 37 ويستمر في 38؛ وآخر صفحاته بلا تنبيه
+  const state = () => pg.evaluate(() => ({
+    ch: document.getElementById('chapterNumber').textContent,
+    page: chapterPage,
+    arts: [...document.querySelectorAll('#pageIndexList > .pi-article')].map(x => x.textContent),
+    nums: [...document.querySelectorAll('#pageIndexList .pi-num')].map(x => x.textContent),
+    cont: [...document.querySelectorAll('#pageIndexList > .pi-continues')].map(x => x.textContent)
+  }));
   await chooseChapter(pg, 15);
   await sleep(600);
-  const cont = () => pg.evaluate(() => [...document.querySelectorAll('#pageIndexList > .pi-continues')].map(x => x.textContent));
-  const c15 = await cont();
-  check('«يستمر الفصل 15 في الصفحة التالية (38)»', c15.length === 1 && c15[0].includes('يستمر الفصل 15 في الصفحة التالية (38)'), c15);
-  await pg.evaluate(() => { stepPage(1); stepPage(1); });
-  await sleep(400);
-  check('لا تنبيه في آخر صفحة من الفصل', (await cont()).length === 0);
+  let s = await state();
+  check('«يستمر الفصل 15 في الصفحة التالية (38)»', s.cont.length === 1 && s.cont[0].includes('يستمر الفصل 15 في الصفحة التالية (38)'), s.cont);
+  check('الصفحة 37 مع الفصل 15: المادة (27) وحدها', s.arts.join() === 'المادة (27)', s.arts);
+  const last15 = await pg.evaluate(() => sectionEnd('chapter', currentSection()));
+  await pg.evaluate(p => { chapterPage = p; renderChapter(); }, last15);
+  await sleep(300);
+  check('لا تنبيه في آخر صفحة من الفصل', (await state()).cont.length === 0);
 
+  // «ثالثاً» من الفصل 14 في الصفحة 37: يظهر مع الفصل 14، والتالية تنتقل إلى الفصل 15 في الصفحة نفسها
+  await chooseChapter(pg, 14);
+  await sleep(500);
+  await pg.evaluate(() => { stepPage(1); stepPage(1); });
+  s = await state();
+  check('الفصل 14 يستمر إلى الصفحة 37', s.cont.some(x => x.includes('الصفحة التالية (37)')), s);
+  await pg.evaluate(() => stepPage(1));
+  s = await state();
+  check('الصفحة 37 مع الفصل 14: بنوده الأربعة وحدها', s.ch === 'الفصل 14' && s.arts.join() === 'المادة (26)' && s.nums.length === 4 && s.nums[3] === 'ثالثاً' && s.cont.length === 0, s);
+  const p37 = s.page;
+  await pg.evaluate(() => stepPage(1));
+  s = await state();
+  check('«التالية» تنتقل إلى الفصل 15 في الصفحة نفسها', s.ch === 'الفصل 15' && s.page === p37 && s.arts.join() === 'المادة (27)', s);
+  await pg.evaluate(() => stepPage(-1));
+  s = await state();
+  check('«السابقة» تعود إلى الفصل 14 في الصفحة نفسها', s.ch === 'الفصل 14' && s.page === p37, s);
   // البند يُفتح في مكانه
   await pg.evaluate(() => document.querySelector('#pageIndexList > .pi-entry .pi-item').click());
   await sleep(400);
