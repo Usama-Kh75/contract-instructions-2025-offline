@@ -118,6 +118,16 @@ async function run(dev, browser) {
   check('الفصل 7 يبدأ بالمادة (16)', idx.arts.join() === 'المادة (16)', idx);
   check('بنود الفصل 6 مطويّة في سطر', /من الفصل 6 في أعلى الصفحة/.test(idx.fold), idx.fold);
 
+  // الفصل 15 يبدأ آخر الصفحة 37 ويستمر في 38؛ وآخر صفحاته بلا تنبيه
+  await chooseChapter(pg, 15);
+  await sleep(600);
+  const cont = () => pg.evaluate(() => [...document.querySelectorAll('#pageIndexList > .pi-continues')].map(x => x.textContent));
+  const c15 = await cont();
+  check('«يستمر الفصل 15 في الصفحة التالية (38)»', c15.length === 1 && c15[0].includes('يستمر الفصل 15 في الصفحة التالية (38)'), c15);
+  await pg.evaluate(() => { stepPage(1); stepPage(1); });
+  await sleep(400);
+  check('لا تنبيه في آخر صفحة من الفصل', (await cont()).length === 0);
+
   // البند يُفتح في مكانه
   await pg.evaluate(() => document.querySelector('#pageIndexList > .pi-entry .pi-item').click());
   await sleep(400);

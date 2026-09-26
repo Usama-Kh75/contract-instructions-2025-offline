@@ -766,6 +766,10 @@
       font-weight: 700;
       margin: 0 2px 6px;
     }
+    .pi-continues {
+      margin-top: 10px;
+      color: var(--gold-text);
+    }
 
     /* the wave: each line arrives a beat after the one above it, once per
        page turn — then everything is still, so it never competes with reading */
@@ -4400,12 +4404,24 @@
         entry.append(b, body);
         return entry;
       };
+      // A chapter rarely ends where its page does: «أولاً» of chapter 15 sits
+      // at the foot of printed page 37 and «ثانياً» onwards on 38. The list
+      // closing on «أولاً / ج» read as the whole chapter. A plain line, not a
+      // button: «التالية» under the scan already turns the page.
+      const sec = currentSection();
+      const continues = () => {
+        if (pdfPage >= (sec.endPage || sec.pdfPage)) return;
+        const next = (Number(sec.printedPage) - Number(sec.pdfPage)) + pdfPage + 1;
+        const verb = selectedKind === 'annex' ? 'تستمر ' : 'يستمر ';
+        add(node('p', 'pi-note pi-continues', '↓ ' + verb + sectionName(selectedKind + ':' + selectedChapter) + ' في الصفحة التالية (' + next + ').'));
+      };
       const here = clausesByPage.get(pdfPage) || [];
       if (!here.length) {
         // no guessing which clause this page continues: the data records
         // where a clause starts, not where it ends, so a guess could be wrong
         pageIndexTitle.textContent = 'في هذه الصفحة';
         add(node('p', 'pi-note', 'لا يبدأ في هذه الصفحة بندٌ جديد.'));
+        continues();
         return;
       }
       const groupInto = (list, target) => {
@@ -4425,6 +4441,7 @@
       if (!mine.length) {
         pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(here.length, 'بند');
         groupInto(here, add);
+        continues();
         return;
       }
       pageIndexTitle.textContent = 'في هذه الصفحة — ' + countAr(mine.length, 'بند');
@@ -4466,6 +4483,7 @@
       };
       bySection(before).forEach(l => folded(l, 'في أعلى الصفحة'));
       groupInto(mine, add);
+      continues();
       bySection(after).forEach(l => folded(l, 'في أسفل الصفحة'));
     }
 
