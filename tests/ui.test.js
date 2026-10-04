@@ -203,6 +203,16 @@ async function run(dev, browser) {
     (document.querySelector('.pi-item[aria-expanded=true] .pi-num') || {}).textContent === 'أولاً / أ'));
 
   // البحث والزر العائم
+  // الكفاءة المالية (السيولة بكتاب مصرف) معيار غير الحسابات الختامية (أرباح ثلاث سنوات)
+  const fin = await pg.evaluate(async () => {
+    performSearch('الكفاءة المالية');
+    await new Promise(r => setTimeout(r, 500));
+    const ids = [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    const want = data.clauses.find(x => x.title === 'الكفاءة المالية (التجهيز)').id;
+    return { n: ids.length, finalAccounts: ids.includes('a4-completion-final-accounts'), capacity: ids.includes(want) };
+  });
+  check('بحث «الكفاءة المالية» لا يُظهر «الحسابات الختامية المصدقة»', fin.n > 0 && fin.capacity && !fin.finalAccounts, fin);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));
