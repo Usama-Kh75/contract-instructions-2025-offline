@@ -74,6 +74,13 @@ async function run(dev, browser) {
   await pg.keyboard.press('Enter');
   await sleep(900);
   check('Enter يفتح نافذة العرض', await isActive(pg));
+  const head1 = await pg.evaluate(() => ({ ref: lightboxRef.textContent, sub: lightboxSub.textContent }));
+  check('رأس النافذة «الفصل 1 › المادة (1)» ثم العنوان والصفحة',
+    head1.ref === 'الفصل 1 › المادة (1)' && head1.sub === 'التعاريف والسريان · الصفحة المطبوعة 1', head1);
+  // ‹ و› تنعكسان داخل النص العربي إن لم تُعزلا، فتشير «التالية» إلى اليمين
+  const icons = await pg.evaluate(() => ['#lbNextBtn .lb-icon', '#lbPrevBtn .lb-icon', '#nextPage .pg-icon', '#prevPage .pg-icon']
+    .map(s => { const e = document.querySelector(s), st = getComputedStyle(e); return e.textContent + (st.direction === 'ltr' && st.unicodeBidi === 'isolate' ? '' : '!'); }).join(''));
+  check('سهم «التالية» يشير يساراً و«السابقة» يميناً', icons === '‹›‹›', icons);
   check('التركيز ينتقل إلى «إغلاق»', await pg.evaluate(() => document.activeElement.id) === 'lightboxCloseBtn');
   let escaped = 0;
   for (let i = 0; i < 10; i++) {
@@ -132,6 +139,28 @@ async function run(dev, browser) {
   let s = await state();
   check('«يستمر الفصل 15 في الصفحة التالية (38)»', s.cont.length === 1 && s.cont[0].includes('يستمر الفصل 15 في الصفحة التالية (38)'), s.cont);
   check('الصفحة 37 مع الفصل 15: المادة (27) وحدها', s.arts.join() === 'المادة (27)', s.arts);
+  await pg.evaluate(() => document.getElementById('chapterImagePane').click());
+  await sleep(400);
+  const head15 = await pg.evaluate(() => ({ ref: lightboxRef.textContent, sub: lightboxSub.textContent }));
+  check('رأس النافذة «الفصل 15 › المادة (27)»',
+    head15.ref === 'الفصل 15 › المادة (27)' && head15.sub === 'التأمينات والغرامات التأخيرية · الصفحة المطبوعة 37', head15);
+  await pg.keyboard.press('Escape');
+  await sleep(300);
+  // من بند: مسار الإحالة كاملاً
+  const headClause = await pg.evaluate(async () => {
+    const c = data.clauses.find(x => x.title === 'الكفاءة المالية (التجهيز)');
+    renderSource(c);
+    [...document.querySelectorAll('#sourcePage a')].find(a => a.textContent.includes('تكبير')).click();
+    await new Promise(r => setTimeout(r, 300));
+    return { ref: lightboxRef.textContent, sub: lightboxSub.textContent };
+  });
+  check('رأس النافذة من بند «ضوابط رقم (5) › ثالثا › 1 › ب»',
+    headClause.ref === 'ضوابط رقم (5) › ثالثا › 1 › ب' && headClause.sub === 'الكفاءة المالية (التجهيز) · الصفحة المطبوعة 83', headClause);
+  await pg.keyboard.press('Escape');
+  await sleep(300);
+  await pg.evaluate(() => showChapters());
+  await chooseChapter(pg, 15);
+  await sleep(500);
   const last15 = await pg.evaluate(() => sectionEnd('chapter', currentSection()));
   await pg.evaluate(p => { chapterPage = p; renderChapter(); }, last15);
   await sleep(300);

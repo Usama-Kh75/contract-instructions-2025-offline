@@ -1676,6 +1676,10 @@
     }
 
     .lightbox-btn .lb-icon { font-size: 1.15rem; line-height: 1; }
+    /* ‹ and › are "mirrored" characters: inside Arabic text the browser
+       flips them, so «التالية ‹», on the left where an Arabic book turns,
+       pointed right, back at «السابقة». Isolated as LTR they show as typed. */
+    .lb-icon, .pg-icon { direction: ltr; unicode-bidi: isolate; display: inline-block; }
 
     .lightbox-btn:hover:not(:disabled) {
       background: var(--primary-light);
@@ -1704,15 +1708,21 @@
     .lightbox-body.pannable { cursor: grab; }
     .lightbox-body.panning { cursor: grabbing; user-select: none; }
 
+    /* two lines: the reference as the text cites it, then title and page */
     .lightbox-title {
       flex: 1;
       min-width: 0;
-      font-weight: 800;
-      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .lightbox-title > span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .lb-ref { font-weight: 800; font-size: 1.05rem; }
+    .lb-sub { font-weight: 600; font-size: 0.85rem; opacity: 0.75; }
 
     /* On a phone the tools cannot share a row with the title: they overflow
        past the screen edge, and «إغلاق» — the only way out — goes with
@@ -1728,7 +1738,9 @@
         margin-bottom: 8px;
       }
 
-      .lightbox-title { font-size: 0.85rem; white-space: normal; line-height: 1.4; }
+      .lightbox-title > span { white-space: normal; line-height: 1.4; }
+      .lb-ref { font-size: 0.92rem; }
+      .lb-sub { font-size: 0.78rem; }
 
       .lightbox-controls {
         position: fixed;
@@ -2042,9 +2054,9 @@
             <span class="image-zoom-overlay" aria-hidden="true">🔍 تكبير الصفحة</span>
           </button>
           <div class="pager">
-            <button class="pagebtn" id="prevPage" type="button">› السابقة</button>
+            <button class="pagebtn" id="prevPage" type="button"><span class="pg-icon" aria-hidden="true">›</span> السابقة</button>
             <span class="pagecount" id="pageCount"></span>
-            <button class="pagebtn" id="nextPage" type="button">التالية ‹</button>
+            <button class="pagebtn" id="nextPage" type="button">التالية <span class="pg-icon" aria-hidden="true">‹</span></button>
           </div>
         </div>
       </article>
@@ -2087,7 +2099,7 @@
        reset also wiped the turn the reader had saved for the page. -->
   <div class="lightbox-modal" id="lightboxModal" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
     <div class="lightbox-header">
-      <span class="lightbox-title" id="lightboxTitle"></span>
+      <div class="lightbox-title" id="lightboxTitle"><span class="lb-ref" id="lightboxRef"></span><span class="lb-sub" id="lightboxSub"></span></div>
       <div class="lightbox-controls" role="toolbar" aria-label="أدوات عرض الصفحة">
         <div class="lb-group">
           <button class="lightbox-btn" id="lbPrevBtn" type="button" aria-label="الصفحة السابقة" hidden><span class="lb-icon" aria-hidden="true">›</span><span class="lb-label">السابقة</span></button>
@@ -2748,10 +2760,47 @@
 
     let lightboxReturnFocus = null;
 
-    function openLightbox(src, title) {
+    // The header names what is on screen the way the text is cited — the
+    // reference (ضوابط رقم (5) › ثالثاً › 1) above, title and printed page
+    // below. It used to give the title alone, and a reader quoting the page
+    // from in here had to close it to find the number.
+    const lightboxRef = document.getElementById('lightboxRef');
+    const lightboxSub = document.getElementById('lightboxSub');
+    function setLightboxTitle(ref, sub) {
+      lightboxRef.textContent = ref;
+      lightboxSub.textContent = sub || '';
+      lightboxSub.hidden = !sub;
+      const all = sub ? ref + ' — ' + sub : ref;
+      lightboxTitle.setAttribute('aria-label', all);
+      lightboxImg.alt = 'صورة ' + all;
+    }
+
+    const clauseRef = c => c.article + (c.clause ? ' › ' + String(c.clause).split(' / ').join(' › ') : '');
+
+    // a page as the chosen section sees it: «الفصل 15 › المادة (27)», or for
+    // an annex its top-level items, «ضوابط رقم (5) › ثالثاً». A page where no
+    // clause starts names the section only, with no guess at what it carries.
+    function pageTitle(page) {
+      const sec = currentSection();
+      const key = selectedKind + ':' + selectedChapter;
+      const mine = (clausesByPage.get(page) || []).filter(x => { const k = sectionKeyOf(x); return k === null || k === key; });
+      let at = '';
+      if (selectedKind === 'annex') {
+        const heads = [...new Set(mine.map(x => String(x.clause).split(' / ')[0]))];
+        at = heads.length > 1 ? heads[0] + ' – ' + heads[heads.length - 1] : (heads[0] || '');
+      } else {
+        const arts = [...new Set(mine.map(articleNo))];
+        at = arts.length === 1 ? 'المادة (' + arts[0] + ')'
+          : arts.length === 2 ? 'المادتان (' + arts[0] + ') و(' + arts[1] + ')'
+          : arts.length ? 'المواد (' + arts[0] + ') – (' + arts[arts.length - 1] + ')' : '';
+      }
+      const printed = Number(sec.printedPage) - Number(sec.pdfPage) + page;
+      return [sectionName(key) + (at ? ' › ' + at : ''), sec.title + ' · الصفحة المطبوعة ' + printed];
+    }
+
+    function openLightbox(src, ref, sub) {
       if (!lightbox.classList.contains('active')) lightboxReturnFocus = document.activeElement;
-      lightboxTitle.textContent = title || 'معاينة الصفحة الرسمية';
-      lightboxImg.alt = 'صورة ' + lightboxTitle.textContent;
+      setLightboxTitle(ref || 'معاينة الصفحة الرسمية', sub);
       currentZoom = 1;
       lightboxSrc = src;
       lightboxRotation = rotStore.get(src);
@@ -2798,14 +2847,6 @@
       return m ? parseInt(m[1], 10) : null;
     }
 
-    function pageLabel(n) {
-      const sec = sectionFor(n);
-      const head = sec
-        ? (sec.kind === 'annex' ? 'ضوابط رقم (' + sec.number + ')' : 'الفصل ' + sec.number)
-        : 'المستند';
-      return head + ' — الصفحة المطبوعة ' + (n - 6);
-    }
-
     function syncLightboxPager() {
       const on = lightboxPageNo !== null;
       lbPrev.hidden = !on;
@@ -2827,8 +2868,6 @@
       lightboxSrc = src;
       // each page remembers its own turn; zoom is the reader's, so it stays
       lightboxRotation = rotStore.get(src);
-      lightboxTitle.textContent = pageLabel(t);
-      lightboxImg.alt = 'صورة ' + lightboxTitle.textContent;
       lightboxImg.src = src;
       if (lightboxImg.complete && lightboxImg.naturalWidth) applyView();
       // a new page is read from its top, which in Arabic is the top-right
@@ -2840,6 +2879,7 @@
       if (sec) { selectedKind = sec.kind; selectedChapter = sec.number; }
       chapterPage = t;
       renderChapter();
+      setLightboxTitle(...pageTitle(t));
       syncLightboxPager();
     }
 
@@ -4090,7 +4130,7 @@
       let pageImageOk = true;
       const zoomPage = () => {
         if (!pageImageOk) return;
-        openLightbox('.' + c.pageImage, c.title + ' — صفحة ' + c.printedPage);
+        openLightbox('.' + c.pageImage, clauseRef(c), c.title + ' · الصفحة المطبوعة ' + c.printedPage);
       };
 
       const openModalBtn = node('a', '', '🔍 تكبير وقراءة الصفحة');
@@ -4184,10 +4224,9 @@
       imgEl.src = src;
       imgEl.alt = label + ' - صفحة ' + pos;
 
-      const caption = label + ': ' + c.title + ' (صفحة ' + pos + ')';
       const pane = document.getElementById('chapterImagePane');
       pane.setAttribute('aria-label', 'تكبير الصفحة لقراءتها — ' + label + '، صفحة ' + pos + ' من ' + total);
-      pane.onclick = () => openLightbox(src, caption);
+      pane.onclick = () => openLightbox(src, ...pageTitle(chapterPage));
     }
 
     // The 40 sections tile pages 7-174 with no gap, so paging need not stop
