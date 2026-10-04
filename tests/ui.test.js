@@ -212,6 +212,14 @@ async function run(dev, browser) {
     return { n: ids.length, finalAccounts: ids.includes('a4-completion-final-accounts'), capacity: ids.includes(want) };
   });
   check('بحث «الكفاءة المالية» لا يُظهر «الحسابات الختامية المصدقة»', fin.n > 0 && fin.capacity && !fin.finalAccounts, fin);
+  // «عطاء مشروط»: المبني على تخفيض من عطاءات أخرى، والمتضمّن تحفظات — كلاهما
+  const cond = await pg.evaluate(async () => {
+    performSearch('عطاء مشروط');
+    await new Promise(r => setTimeout(r, 500));
+    const ids = [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    return { discount: ids.includes('a4-minutes-conditional-discount-bids'), reservations: ids.includes('a4-minutes-reservations-and-notes') };
+  });
+  check('بحث «عطاء مشروط» يُظهر التخفيض المشروط والتحفظات معاً', cond.discount && cond.reservations, cond);
 
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
