@@ -16,6 +16,9 @@ const ROOT = __dirname;
 const SRC = path.join(ROOT, 'src');
 const OUT = path.join(ROOT, 'تعليمات العقود.html');
 const STAMP = path.join(SRC, '.built-hash');
+const README = path.join(ROOT, 'README.md');
+const FP_START = '<!-- سجل البصمة: يُولَّد من src/fingerprints.json بـ«node build.js»، فلا تحرّره هنا -->';
+const FP_END = '<!-- نهاية سجل البصمة -->';
 
 const args = process.argv.slice(2);
 const CHECK = args.includes('--check');
@@ -102,6 +105,41 @@ function assemble() {
   };
 }
 
+// سجل البصمة المنشور في README.md. كل بصمة تُبنى يجب أن تكون آخر سطر في
+// src/fingerprints.json بتاريخها ونسختها وسبب تغيّرها، وإلا توقف البناء:
+// فلا تتغير البصمة التي بيد الزملاء دون أن يُوثَّق سببها، ولا تُمحى سابقتها.
+function fingerprintLog(integrity, meta) {
+  const log = readJson(path.join(SRC, 'fingerprints.json'));
+  if (!Array.isArray(log) || !log.length) throw new Error('src/fingerprints.json يجب أن يكون مصفوفة غير فارغة');
+  if (log[log.length - 1].fingerprint !== integrity) {
+    throw new Error('البصمة ' + integrity + ' غير مسجلة في آخر src/fingerprints.json: أضف سطرها بتاريخها ونسختها وسبب تغيّرها، ثم ابنِ من جديد');
+  }
+  log.forEach((r, i) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || !/^\d+(\.\d+)*$/.test(String(r.version)) ||
+        !/^[0-9a-f]{8}$/.test(r.fingerprint) || !String(r.reason || '').trim()) {
+      throw new Error('src/fingerprints.json: السطر ' + (i + 1) + ' يحتاج date مثل 2026-10-22، وversion، وfingerprint من ثمانية أحرف، وreason');
+    }
+    if (i && r.date < log[i - 1].date) throw new Error('src/fingerprints.json: السطر ' + (i + 1) + ' أقدم من الذي قبله');
+  });
+  const cell = s => String(s).replace(/\|/g, '\\|');
+  return [
+    FP_START,
+    'الإصدار الحالي **' + meta.version + '** (' + meta.releaseDate + ')، والبصمة الرقمية المعتمدة **' + integrity + '**.',
+    '',
+    '| التاريخ | النسخة | البصمة | سبب التغيير |',
+    '|---|---|---|---|',
+    ...log.map(r => '| ' + r.date + ' | ' + r.version + ' | `' + r.fingerprint + '` | ' + cell(r.reason) + ' |'),
+    FP_END
+  ].join('\n');
+}
+
+function withLog(readme, block) {
+  const a = readme.indexOf(FP_START);
+  const b = readme.indexOf(FP_END);
+  if (a < 0 || b < a) throw new Error('README.md: علامتا سجل البصمة مفقودتان');
+  return readme.slice(0, a) + block + readme.slice(b + FP_END.length);
+}
+
 function render(data) {
   const template = lf(fs.readFileSync(path.join(SRC, 'template.html'), 'utf8'));
   if (!template.includes('@@APPDATA@@')) throw new Error('القالب لا يحوي العلامة @@APPDATA@@');
@@ -113,10 +151,13 @@ function main() {
   const out = render(data);
   const existing = fs.existsSync(OUT) ? lf(fs.readFileSync(OUT, 'utf8')) : null;
   const same = existing === out;
+  const readmeOld = lf(fs.readFileSync(README, 'utf8'));
+  const readme = withLog(readmeOld, fingerprintLog(integrity, data));
 
   if (CHECK) {
-    console.log(same ? '✔ المُخرَج مطابق للمصادر' : '✘ المُخرَج يختلف عن المصادر — شغّل «node build.js»');
-    process.exit(same ? 0 : 1);
+    const ok = same && readme === readmeOld;
+    console.log(ok ? '✔ المُخرَج مطابق للمصادر' : '✘ المُخرَج يختلف عن المصادر — شغّل «node build.js»');
+    process.exit(ok ? 0 : 1);
   }
 
   // حارس التحرير اليدوي: إن كان الملف الموجود لا يطابق ما بنيناه آخر مرة،
@@ -143,6 +184,7 @@ function main() {
     'utf8'
   );
   fs.writeFileSync(STAMP, fnv1a(out) + '\n', 'utf8');
+  if (readme !== readmeOld) fs.writeFileSync(README, readme, 'utf8');
 
   console.log('بنود   : ' + data.clauses.length + ' (منها ' + data.clauses.filter(c => c.verbatim === true).length + ' حرفياً)');
   console.log('البصمة : ' + integrity);

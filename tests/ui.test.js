@@ -220,6 +220,27 @@ async function run(dev, browser) {
     return { discount: ids.includes('a4-minutes-conditional-discount-bids'), reservations: ids.includes('a4-minutes-reservations-and-notes') };
   });
   check('بحث «عطاء مشروط» يُظهر التخفيض المشروط والتحفظات معاً', cond.discount && cond.reservations, cond);
+  // «السيولة» كلمة القارئ، و«الكفاءة المالية» لفظ الجداول: شرح معادلة الأشغال
+  // يسمّيها سيولة فتظهر مباشرة، ونسب غير الاستشارية لا تحملها فتُقترح ولا تُضاف دون ضغطه
+  const liq = await pg.evaluate(async () => {
+    performSearch('السيولة');
+    await new Promise(r => setTimeout(r, 500));
+    const ids = () => [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    const before = ids();
+    const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
+    if (add) add.click();
+    await new Promise(r => setTimeout(r, 300));
+    const after = ids();
+    return {
+      entity: before.includes('a2-authority-10-percent-operating'),
+      works: before.includes('a5-t1-fin-small'),
+      hidden: !before.includes('a5-t3-fin-small'),
+      offered: !!add,
+      services: after.includes('a5-t3-fin-small')
+    };
+  });
+  check('بحث «السيولة» يُظهر معادلة الأشغال، ويقترح نسب غير الاستشارية ولا يضيفها بلا ضغط',
+    liq.entity && liq.hidden && liq.offered && liq.works && liq.services, liq);
 
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
