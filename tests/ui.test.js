@@ -242,6 +242,21 @@ async function run(dev, browser) {
   check('بحث «السيولة» يُظهر معادلة الأشغال، ويقترح نسب غير الاستشارية ولا يضيفها بلا ضغط',
     liq.entity && liq.hidden && liq.offered && liq.works && liq.services, liq);
 
+  // «العطاء الموزون» لفظ الميدان ولا يرد في النص: لا نتيجة مباشرة، لكن الشريط يقترح
+  // جدول الكميات المسعّر من جهة التعاقد فيصل الباحث إلى ضوابط (4) سادساً / 5 بضغطة
+  const wtd = await pg.evaluate(async () => {
+    performSearch('العطاء الموزون');
+    await new Promise(r => setTimeout(r, 500));
+    const ids = () => [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    const before = ids();
+    const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
+    if (add) add.click();
+    await new Promise(r => setTimeout(r, 300));
+    return { direct: before.length, offered: !!add, reached: ids().includes('a4-exclusion-20-percent-unbalanced') };
+  });
+  check('بحث «العطاء الموزون» يقترح جدول الكميات المسعّر ويصل إلى سادساً / 5 بالضغط',
+    wtd.direct === 0 && wtd.offered && wtd.reached, wtd);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));
