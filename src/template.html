@@ -3054,9 +3054,14 @@
              !x.title.includes(nq) && !x.official.includes(nq) && !x.explain.includes(nq);
     }
 
-    // true when no clause carries the phrase in its own words
-    const nowhereLiteral = nq => !idx.some(x =>
-      x.title.includes(nq) || x.official.includes(nq) || x.explain.includes(nq));
+    // true when no clause carries the phrase in its own words; cached because
+    // every result card asks, and each answer is a scan of the whole index
+    const literalCache = new Map();
+    const nowhereLiteral = nq => {
+      if (!literalCache.has(nq)) literalCache.set(nq, !idx.some(x =>
+        x.title.includes(nq) || x.official.includes(nq) || x.explain.includes(nq)));
+      return literalCache.get(nq);
+    };
 
     // --- Install as an app (web copy only) ---
     // Chrome/Edge (Android and desktop) offer the install through a captured event; iOS
@@ -3955,7 +3960,9 @@
         if (via) body.append(node('span', 'via-tag', 'عُثر عليه بصيغة: ' + via));
         else if (tag) body.append(node('span', 'via-tag via-loose', tag));
         else if (keywordOnly(c, nq)) body.append(node('span', 'via-tag via-concept',
-          'مصطلح مفاهيمي — لا يرد حرفياً في نص التعليمات'));
+          nowhereLiteral(nq)
+            ? 'مصطلح مفاهيمي — لا يرد حرفياً في نص التعليمات'
+            : 'مطابقة عبر الكلمات المفتاحية لهذا البند، لا عبر نصه'));
         b.append(body, node('span', 'check', '✓'));
         b.addEventListener('click', () => selectResult(c.id));
         return b;

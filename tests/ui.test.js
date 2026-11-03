@@ -273,6 +273,17 @@ async function run(dev, browser) {
     wtd['العطاء الموزون'] && wtd['عطاء موزون'] && wtd['العرض الموزون'] && wtd['عرض موزون'] && wtd['موزون'] &&
     wtd.tag && wtd.notice && wtd['via الأسعار الموزونة'] && wtd['via العطاءات الموزونة'], wtd);
 
+  // الوسم لا يدّعي أن العبارة غير واردة في التعليمات إلا إذا لم يقلها أي بند بنصه:
+  // «الموازنة الاستثمارية» ترد نصاً في بنود، فبند كلماته المفتاحية وحدها يُوسم بالصيغة الأضيق
+  const narrow = await pg.evaluate(async () => {
+    performSearch('الموازنة الاستثمارية');
+    await new Promise(r => setTimeout(r, 500));
+    const tags = [...document.querySelectorAll('.via-concept')].map(e => e.textContent);
+    return { n: tags.length, allNarrow: tags.every(t => t.startsWith('مطابقة عبر الكلمات المفتاحية')), noClaim: !tags.some(t => t.includes('لا يرد حرفياً')) };
+  });
+  check('وسم الكلمات المفتاحية لا يدّعي غياب العبارة عن التعليمات وهي واردة في بند آخر',
+    narrow.n > 0 && narrow.allNarrow && narrow.noClaim, narrow);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));
