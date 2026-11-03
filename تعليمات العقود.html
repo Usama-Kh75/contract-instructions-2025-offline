@@ -1486,7 +1486,7 @@
     .concept-divider {
       margin: 22px 0 10px;
       padding: 8px 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.18);
+      border-top: 1px solid var(--card-border);
       font-weight: 800;
       font-size: 0.88rem;
       opacity: 0.85;
@@ -1536,9 +1536,6 @@
       color: var(--text-subtle);
     }
 
-    .via-loose { opacity: 0.6; }
-    .via-concept { border-style: dashed; }
-
     .via-tag {
       display: inline-block;
       margin-top: 6px;
@@ -1549,6 +1546,10 @@
       font-weight: 700;
       opacity: 0.9;
     }
+
+    /* modifiers come after the base rule: same specificity, so order decides */
+    .via-tag.via-loose { opacity: 0.6; }
+    .via-tag.via-concept { border-style: dashed; }
 
     .offline-box {
       display: flex;
@@ -26724,10 +26725,18 @@
 
     // true when no clause carries the phrase in its own words; cached because
     // every result card asks, and each answer is a scan of the whole index
+    // Word-aware with the leading ال folded, as concept matching is: «كلفة
+    // تخمينية» is the document's «الكلفة التخمينية», not a field term.
     const literalCache = new Map();
+    let literalWords = null;
     const nowhereLiteral = nq => {
-      if (!literalCache.has(nq)) literalCache.set(nq, !idx.some(x =>
-        x.title.includes(nq) || x.official.includes(nq) || x.explain.includes(nq)));
+      if (!literalCache.has(nq)) {
+        if (!literalWords) literalWords = idx.map(x => [x.title, x.official, x.explain].map(wordsOf));
+        const nw = wordsOf(nq);
+        literalCache.set(nq, !idx.some((x, i) =>
+          x.title.includes(nq) || x.official.includes(nq) || x.explain.includes(nq) ||
+          literalWords[i].some(f => hasPhrase(f, nw))));
+      }
       return literalCache.get(nq);
     };
 
@@ -27652,7 +27661,16 @@
       let divider = null;
       if (found) {
         const top = node('div', 'concept-bar concept-top');
-        if (nowhereLiteral(nq)) top.append(node('p', 'concept-warn',
+        // judged on the concept wording the query names, not the whole query:
+        // «شروط خطاب الضمان» is not in the text as a phrase, yet «خطاب
+        // الضمان» is the document's own term and must not be called field usage
+        const qwAll = wordsOf(nq);
+        const named = (found.def.terms || []).map(t => q(t)).filter(t => {
+          const tw = wordsOf(t);
+          return hasPhrase(qwAll, tw) || (qwAll.length >= 2 && hasPhrase(tw, qwAll));
+        });
+        const fieldOnly = nowhereLiteral(nq) && named.length > 0 && named.every(nowhereLiteral);
+        if (fieldOnly) top.append(node('p', 'concept-warn',
           'تنبيه: «' + lastQuery.trim() + '» مصطلح مفاهيمي من ألفاظ الميدان، ولا يرد حرفياً في التعليمات. ' +
           'والبنود المقترحة تقابله بألفاظ المستند نفسه.'));
         const head = node('p', 'concept-head');
@@ -27694,7 +27712,12 @@
         } else {
           const go = node('button', 'btn-copy btn-quiet', '↓ انتقل إلى البنود المضافة (' + found.extras.length + ')');
           go.type = 'button';
-          go.addEventListener('click', () => divider && divider.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+          go.addEventListener('click', () => {
+            if (!divider) return;
+            divider.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // keyboard and screen-reader users land where the eye does
+            divider.focus({ preventScroll: true });
+          });
           top.append(go);
         }
         list.append(top);
@@ -27737,6 +27760,7 @@
       if (found && conceptAdded) {
         divider = node('div', 'concept-divider',
           'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')');
+        divider.tabIndex = -1;
         list.append(divider);
         found.extras.forEach((x, i) => list.append(card(x.clause, results.length + i, x.via)));
         // with a long result list the new block lands far below the fold,
@@ -27792,7 +27816,10 @@
       }
 
       const verbatim = c.verbatim === true;
-      const n = results.findIndex(x => x.id === c.id) + 1;
+      // the card's own number: concept extras are not in `results`, and
+      // looking them up there printed «00» for every added clause
+      const cardIdx = document.querySelector('.result-card[data-id="' + CSS.escape(String(c.id)) + '"] .idx');
+      const n = cardIdx ? parseInt(cardIdx.textContent, 10) : results.findIndex(x => x.id === c.id) + 1;
       const head = node('div', 'source-head');
       const titleDiv = node('div', '');
       titleDiv.append(

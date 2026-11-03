@@ -314,6 +314,34 @@ async function run(dev, browser) {
   check('شريط المفهوم فوق النتائج، يفصل ألفاظ المستند عن ألفاظ الميدان، وكل لفظ يبحث بضغطة',
     Object.values(top).every(Boolean), top);
 
+  // مراجعة Antigravity: لا تنبيه «لا يرد حرفياً» لعبارة تسمّي لفظاً رسمياً، ولا بلا «ال»؛
+  // والوسم بإطار متقطع فعلاً؛ ورقم البند المضاف في لوحة السند هو رقم بطاقته لا «00»
+  const rev = await pg.evaluate(async () => {
+    const warn = async t => {
+      performSearch(t); await new Promise(r => setTimeout(r, 500));
+      return !!document.querySelector('.concept-top .concept-warn');
+    };
+    const out = {
+      officialPhrase: !(await warn('شروط خطاب الضمان')),
+      noAl: !(await warn('كلفة تخمينية')),
+      fieldTerm: await warn('العطاء الموزون')
+    };
+    const tag = document.querySelector('.via-concept');
+    out.dashed = !!tag && getComputedStyle(tag).borderTopStyle === 'dashed';
+    performSearch('المبلغ التخميني'); await new Promise(r => setTimeout(r, 500));
+    const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
+    if (add) add.click();
+    await new Promise(r => setTimeout(r, 400));
+    const extra = document.querySelector('.concept-divider ~ .result-card');
+    if (extra) extra.click();
+    await new Promise(r => setTimeout(r, 300));
+    const marker = document.querySelector('.marker strong');
+    out.number = !!extra && !!marker && marker.textContent === extra.querySelector('.idx').textContent && marker.textContent !== '00';
+    return out;
+  });
+  check('التنبيه المفاهيمي لا يصيب الألفاظ الرسمية، والوسم متقطع، ورقم البند المضاف صحيح',
+    Object.values(rev).every(Boolean), rev);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));
