@@ -27422,7 +27422,8 @@
       return shownResults.find(c => c.id === selectedId) || results.find(c => c.id === selectedId) || null;
     }
 
-    function pushTrail() {
+    // label: what the way back names; by default the clause being left
+    function pushTrail(label) {
       const from = currentClause();
       navStack.push({
         results, shownResults, selectedId, jumpUnit, lastQuery,
@@ -27430,7 +27431,7 @@
         title: document.getElementById('queryTitle').textContent,
         searchValue: searchInput.value,
         scrollY: window.scrollY,
-        label: from ? from.article + ' / ' + from.clause : 'الموضع السابق'
+        label: label || (from ? from.article + ' / ' + from.clause : 'الموضع السابق')
       });
       try { history.pushState({ nav: navStack.length }, ''); navDepth = navStack.length; } catch (e) { }
       syncTrail();
@@ -27693,15 +27694,23 @@
           const field = nowhereLiteral(q(t));
           const chip = node('button', 'concept-chip' + (field ? ' concept-chip-field' : ''), t + ' (' + n + ')');
           chip.type = 'button';
-          chip.title = 'ابحث بلفظ «' + t + '»' + (field ? ' — لفظ ميداني لا يرد حرفياً في التعليمات' : '');
-          chip.addEventListener('click', () => performSearch(t));
+          chip.title = 'ابحث بلفظ «' + t + '» ثم عُد إلى بحثك بزر العودة' + (field ? ' — لفظ ميداني لا يرد حرفياً في التعليمات' : '');
+          // the reader's own query must stay one press away: a wording is a
+          // detour, and losing «عطاء موزون» to «جدول الكميات المسعر» left no
+          // way back to the concept they were studying
+          chip.addEventListener('click', () => {
+            pushTrail('بحث «' + lastQuery.trim() + '»');
+            performSearch(t, true);
+          });
           (field ? fieldChips : docChips).append(chip);
         }
         if (docChips.childElementCount) top.append(node('p', 'concept-row', 'يسمّيه المستند:'), docChips);
         if (fieldChips.childElementCount) top.append(node('p', 'concept-row', 'ومن ألفاظ الميدان (لا ترد حرفياً في التعليمات):'), fieldChips);
         if (found.def.note) top.append(node('p', 'concept-note', found.def.note));
         if (!conceptAdded) {
-          const add = node('button', 'btn-copy', '➕ أضِف ' + countAr(found.extras.length, 'بند') + ' من هذه الألفاظ إلى نتائجك');
+          // says what it does: the reader stays on their query and the
+          // clauses that name the concept otherwise are listed under it
+          const add = node('button', 'btn-copy', '➕ أضِف تحت نتائجك ما يذكر المفهوم بهذه الألفاظ (' + found.extras.length + ')');
           add.type = 'button';
           add.addEventListener('click', () => {
             conceptAdded = true;
@@ -28352,9 +28361,12 @@
       indexBtn.hidden = true;
     }
 
-    function performSearch(val) {
+    // keepTrail: a search launched from inside the results (a concept
+    // wording) is a step away from the reader's own query, not a new one, so
+    // the way back to it must survive
+    function performSearch(val, keepTrail) {
       const value = (val || '').trim();
-      clearTrail();
+      if (!keepTrail) clearTrail();
       if (!value) {
         showChapters();
         return;

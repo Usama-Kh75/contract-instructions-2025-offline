@@ -342,6 +342,32 @@ async function run(dev, browser) {
   check('التنبيه المفاهيمي لا يصيب الألفاظ الرسمية، والوسم متقطع، ورقم البند المضاف صحيح',
     Object.values(rev).every(Boolean), rev);
 
+  // زر اللفظ في شريط المفهوم بحثٌ جانبي لا يمحو بحث القارئ: يظهر زر العودة باسم
+  // بحثه، والضغط عليه يعيد «عطاء موزون» بنتائجه وشريطه
+  const back = await pg.evaluate(async () => {
+    performSearch('عطاء موزون');
+    await new Promise(r => setTimeout(r, 500));
+    const chip = [...document.querySelectorAll('.concept-top .concept-chip')].find(b => b.textContent.startsWith('جدول الكميات المسعر'));
+    if (!chip) return { chip: false };
+    chip.click();
+    await new Promise(r => setTimeout(r, 500));
+    const pill = document.getElementById('navBackInline');
+    const out = {
+      chip: true,
+      moved: document.getElementById('searchInput').value.startsWith('جدول الكميات المسعر'),
+      pill: !pill.hidden && pill.textContent.includes('«عطاء موزون»')
+    };
+    pill.click();
+    await new Promise(r => setTimeout(r, 700));
+    out.restored = document.getElementById('searchInput').value === 'عطاء موزون' &&
+      [...document.querySelectorAll('.result-card')].some(b => b.dataset.id === 'a4-exclusion-20-percent-unbalanced') &&
+      !!document.querySelector('.concept-top');
+    out.pillGone = document.getElementById('navBackInline').hidden;
+    return out;
+  });
+  check('زر لفظ المفهوم يبحث به ويترك زر العودة إلى بحث القارئ، والعودة تعيده كما كان',
+    Object.values(back).every(Boolean), back);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));
