@@ -305,7 +305,6 @@ async function run(dev, browser) {
     return {
       firstIsStrip: !!first && first.classList.contains('concept-top'),
       docHasCost: doc.some(t => t.startsWith('الكلفة التخمينية')),
-      fieldHasEstimate: field.some(t => t.startsWith('الكلفة التقديرية')),
       noOwnChip: !doc.concat(field).some(t => t.startsWith('المبلغ التخميني')),
       chipSearched,
       weightedOfferIsField: wfield.some(t => t.startsWith('العرض الموزون')) && !wdoc.some(t => t.startsWith('العرض الموزون'))
@@ -367,6 +366,19 @@ async function run(dev, browser) {
   });
   check('زر لفظ المفهوم يبحث به ويترك زر العودة إلى بحث القارئ، والعودة تعيده كما كان',
     Object.values(back).every(Boolean), back);
+
+  // زر الإضافة لا يجلب بنداً جاراً: ألفاظ المفهوم تُقاس بالعبارة لا بكلمات متفرّقة، فلا يدخل
+  // استقطاع الفقرات غير المنفذة (ضوابط 19 عاشراً) في «العطاء الموزون»، ولا زر إضافة بلا شيء يُضاف
+  const nb = await pg.evaluate(async () => {
+    performSearch('عطاء موزون');
+    await new Promise(r => setTimeout(r, 500));
+    const strip = document.querySelector('.concept-top');
+    const add = strip && [...strip.querySelectorAll('button')].find(b => b.textContent.includes('أضِف'));
+    const ids = [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    return { strip: !!strip, noAdd: !add, noNeighbour: !ids.includes('a19-deduct-unexecuted-items'), direct: ids.includes('a4-exclusion-20-percent-unbalanced') };
+  });
+  check('«عطاء موزون»: شريط المفهوم بلا زر إضافة ولا بند جار، والبند الصحيح مباشرة',
+    Object.values(nb).every(Boolean), nb);
 
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);

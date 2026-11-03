@@ -27133,7 +27133,12 @@
     const conceptHits = new Map();
     function hitsFor(term) {
       const key = q(term);
-      if (!conceptHits.has(key)) conceptHits.set(key, search(term));
+      // Only clauses that SAY the wording, as a phrase. search() also returns
+      // clauses holding its words scattered, and for a long wording that is
+      // noise: «جدول الكميات المسعر من جهة التعاقد» brought in annex 19's
+      // deduction of unexecuted items, which is not the weighted bid at all.
+      // A concept bridges to the same thing; it must not bridge to a neighbour.
+      if (!conceptHits.has(key)) conceptHits.set(key, search(term).filter(c => clauseHasPhrase(c, key)));
       return conceptHits.get(key);
     }
 
@@ -27151,7 +27156,8 @@
           wordings.add(t.raw);
         }
       }
-      if (!extras.length) return null;
+      // no extras is still a concept: the strip names it and offers the other
+      // wordings, it just has nothing to add
       extras.sort((a, b) => cmpResults(a.clause, b.clause));
       return { def: k.def, extras, wordings: [...wordings] };
     }
@@ -27572,7 +27578,10 @@
       // computed BEFORE the empty state, deliberately: a bridge term like
       // «الأمر التغييري» returns nothing on its own, and that is exactly the
       // case the concept layer exists for
-      const found = conceptExtras(lastQuery, results);
+      // a concept with nothing to add and nothing found is not worth a strip,
+      // and must not swallow the empty state
+      let found = conceptExtras(lastQuery, results);
+      if (found && !found.extras.length && !results.length) found = null;
 
       if (!results.length && !found) {
         shownResults = [];
@@ -27705,7 +27714,9 @@
         if (docChips.childElementCount) top.append(node('p', 'concept-row', 'يسمّيه المستند:'), docChips);
         if (fieldChips.childElementCount) top.append(node('p', 'concept-row', 'ومن ألفاظ الميدان (لا ترد حرفياً في التعليمات):'), fieldChips);
         if (found.def.note) top.append(node('p', 'concept-note', found.def.note));
-        if (!conceptAdded) {
+        if (!found.extras.length) {
+          // nothing to add: the clauses that name the concept are already listed
+        } else if (!conceptAdded) {
           // says what it does: the reader stays on their query and the
           // clauses that name the concept otherwise are listed under it
           const add = node('button', 'btn-copy', '➕ أضِف تحت نتائجك ما يذكر المفهوم بهذه الألفاظ (' + found.extras.length + ')');
