@@ -284,6 +284,36 @@ async function run(dev, browser) {
   check('وسم الكلمات المفتاحية لا يدّعي غياب العبارة عن التعليمات وهي واردة في بند آخر',
     narrow.n > 0 && narrow.allNarrow && narrow.noClaim, narrow);
 
+  // المفهوم يُعلن فوق النتائج لا تحتها (كان يختفي تحت ست بطاقات لـ«المبلغ التخميني»)،
+  // وألفاظ المستند وألفاظ الميدان في صفّين منفصلين، وكل لفظ زر يبحث به
+  const top = await pg.evaluate(async () => {
+    performSearch('المبلغ التخميني');
+    await new Promise(r => setTimeout(r, 500));
+    const list = document.getElementById('resultList');
+    const first = list.firstElementChild;
+    const strip = list.querySelector('.concept-top');
+    const doc = strip ? [...strip.querySelectorAll('.concept-chip:not(.concept-chip-field)')].map(b => b.textContent) : [];
+    const field = strip ? [...strip.querySelectorAll('.concept-chip-field')].map(b => b.textContent) : [];
+    const chip = strip && strip.querySelector('.concept-chip');
+    if (chip) chip.click();
+    await new Promise(r => setTimeout(r, 500));
+    const chipSearched = chip ? document.getElementById('searchInput').value === chip.textContent.replace(/ \(\d+\)$/, '') : false;
+    performSearch('العطاء الموزون');
+    await new Promise(r => setTimeout(r, 500));
+    const wfield = [...document.querySelectorAll('.concept-top .concept-chip-field')].map(b => b.textContent);
+    const wdoc = [...document.querySelectorAll('.concept-top .concept-chip:not(.concept-chip-field)')].map(b => b.textContent);
+    return {
+      firstIsStrip: !!first && first.classList.contains('concept-top'),
+      docHasCost: doc.some(t => t.startsWith('الكلفة التخمينية')),
+      fieldHasEstimate: field.some(t => t.startsWith('الكلفة التقديرية')),
+      noOwnChip: !doc.concat(field).some(t => t.startsWith('المبلغ التخميني')),
+      chipSearched,
+      weightedOfferIsField: wfield.some(t => t.startsWith('العرض الموزون')) && !wdoc.some(t => t.startsWith('العرض الموزون'))
+    };
+  });
+  check('شريط المفهوم فوق النتائج، يفصل ألفاظ المستند عن ألفاظ الميدان، وكل لفظ يبحث بضغطة',
+    Object.values(top).every(Boolean), top);
+
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
   await pg.evaluate(() => window.scrollTo(0, 1500));

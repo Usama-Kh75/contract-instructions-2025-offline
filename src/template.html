@@ -1445,6 +1445,44 @@
       padding-right: 10px;
     }
 
+    /* the concept announced above the results: plainly not a result, and
+       plainly not missable */
+    .concept-top {
+      border: 2px solid var(--primary-light);
+      background: color-mix(in srgb, var(--primary-light) 10%, transparent);
+      margin: 0 0 14px;
+    }
+
+    .concept-top .concept-warn {
+      font-weight: 800;
+    }
+
+    .concept-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 4px 0 10px;
+    }
+
+    .concept-chip {
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--primary-light);
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .concept-chip-field { border-style: dashed; opacity: 0.85; }
+
+    .concept-top .concept-row { margin: 0 0 4px; font-size: 0.85rem; opacity: 0.85; }
+
+    .concept-chip:hover,
+    .concept-chip:focus-visible { background: color-mix(in srgb, var(--primary-light) 22%, transparent); }
+
     .concept-divider {
       margin: 22px 0 10px;
       padding: 8px 12px;
@@ -3975,6 +4013,63 @@
       const exact = phraseQuery ? results.filter(c => clauseHasPhrase(c, nq)) : results;
       const loose = phraseQuery ? results.filter(c => !clauseHasPhrase(c, nq)) : [];
 
+      // The concept is announced ABOVE the results. At the bottom it was
+      // invisible whenever the query had a few hits of its own: «المبلغ
+      // التخميني» returns six cards, and the offer to bridge to «الكلفة
+      // التخمينية» sat under all of them where nobody scrolls. Every other
+      // wording is a button that searches it, so the reader never has to
+      // remember or type it. Still an offer: nothing joins the list unasked.
+      let divider = null;
+      if (found) {
+        const top = node('div', 'concept-bar concept-top');
+        if (nowhereLiteral(nq)) top.append(node('p', 'concept-warn',
+          'تنبيه: «' + lastQuery.trim() + '» مصطلح مفاهيمي من ألفاظ الميدان، ولا يرد حرفياً في التعليمات. ' +
+          'والبنود المقترحة تقابله بألفاظ المستند نفسه.'));
+        const head = node('p', 'concept-head');
+        head.append(node('strong', '', 'مفهوم: ' + found.def.label));
+        top.append(head);
+        const qw = wordsOf(nq);
+        const own = t => {
+          const tw = wordsOf(q(t));
+          return tw.length === qw.length && tw.every((w, i) => sameWord(w, qw[i]));
+        };
+        // the document's own wordings and the field's are never mixed in one
+        // row: a field term offered as «what the instructions say» is the very
+        // confusion the warning above exists to prevent
+        const docChips = node('div', 'concept-chips');
+        const fieldChips = node('div', 'concept-chips');
+        for (const t of found.def.terms || []) {
+          if (own(t)) continue;
+          const n = hitsFor(t).length;
+          if (!n) continue;
+          const field = nowhereLiteral(q(t));
+          const chip = node('button', 'concept-chip' + (field ? ' concept-chip-field' : ''), t + ' (' + n + ')');
+          chip.type = 'button';
+          chip.title = 'ابحث بلفظ «' + t + '»' + (field ? ' — لفظ ميداني لا يرد حرفياً في التعليمات' : '');
+          chip.addEventListener('click', () => performSearch(t));
+          (field ? fieldChips : docChips).append(chip);
+        }
+        if (docChips.childElementCount) top.append(node('p', 'concept-row', 'يسمّيه المستند:'), docChips);
+        if (fieldChips.childElementCount) top.append(node('p', 'concept-row', 'ومن ألفاظ الميدان (لا ترد حرفياً في التعليمات):'), fieldChips);
+        if (found.def.note) top.append(node('p', 'concept-note', found.def.note));
+        if (!conceptAdded) {
+          const add = node('button', 'btn-copy', '➕ أضِف ' + countAr(found.extras.length, 'بند') + ' من هذه الألفاظ إلى نتائجك');
+          add.type = 'button';
+          add.addEventListener('click', () => {
+            conceptAdded = true;
+            conceptJustAdded = true;
+            renderResults();
+          });
+          top.append(add);
+        } else {
+          const go = node('button', 'btn-copy btn-quiet', '↓ انتقل إلى البنود المضافة (' + found.extras.length + ')');
+          go.type = 'button';
+          go.addEventListener('click', () => divider && divider.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+          top.append(go);
+        }
+        list.append(top);
+      }
+
       exact.forEach((c, i) => list.append(card(c, i)));
 
       if (loose.length) {
@@ -4009,36 +4104,16 @@
         list.append(bar);
       }
 
-      if (found) {
-        if (conceptAdded) {
-          const divider = node('div', 'concept-divider',
-            'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')');
-          list.append(divider);
-          found.extras.forEach((x, i) => list.append(card(x.clause, results.length + i, x.via)));
-          // with a long result list the new block lands far below the fold,
-          // so accepting the offer would look like nothing happened
-          if (conceptJustAdded) {
-            conceptJustAdded = false;
-            divider.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        } else {
-          const bar = node('div', 'concept-bar');
-          if (nowhereLiteral(nq)) bar.append(node('p', 'concept-note',
-            'تنبيه: «' + lastQuery.trim() + '» مصطلح مفاهيمي من ألفاظ الميدان، ولا يرد حرفياً في التعليمات. ' +
-            'والبنود المقترحة أدناه تقابله بألفاظ المستند نفسه.'));
-          bar.append(node('p', '',
-            'يسمّي المستند هذا المفهوم أيضاً: ' + found.wordings.join('، ') +
-            ' — وتضيف ' + countAr(found.extras.length, 'بند') + ' إلى نتائجك.'));
-          if (found.def.note) bar.append(node('p', 'concept-note', found.def.note));
-          const add = node('button', 'btn-copy', '➕ أضِف هذه البنود');
-          add.type = 'button';
-          add.addEventListener('click', () => {
-            conceptAdded = true;
-            conceptJustAdded = true;
-            renderResults();
-          });
-          bar.append(add);
-          list.append(bar);
+      if (found && conceptAdded) {
+        divider = node('div', 'concept-divider',
+          'بصيغ أخرى للمفهوم نفسه — ' + found.def.label + ' (' + found.extras.length + ')');
+        list.append(divider);
+        found.extras.forEach((x, i) => list.append(card(x.clause, results.length + i, x.via)));
+        // with a long result list the new block lands far below the fold,
+        // so accepting the offer would look like nothing happened
+        if (conceptJustAdded) {
+          conceptJustAdded = false;
+          divider.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
 
