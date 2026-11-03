@@ -242,20 +242,28 @@ async function run(dev, browser) {
   check('بحث «السيولة» يُظهر معادلة الأشغال، ويقترح نسب غير الاستشارية ولا يضيفها بلا ضغط',
     liq.entity && liq.hidden && liq.offered && liq.works && liq.services, liq);
 
-  // «العطاء الموزون» لفظ الميدان ولا يرد في النص: لا نتيجة مباشرة، لكن الشريط يقترح
-  // جدول الكميات المسعّر من جهة التعاقد فيصل الباحث إلى ضوابط (4) سادساً / 5 بضغطة
+  // «العطاء الموزون» لفظ الميدان ولا يرد في النص: كلمة مفتاحية على ضوابط (4) سادساً / 5،
+  // فتظهر مباشرة بلا ضغط، ويبقى شريط المفهوم يعرض جدول الكميات المسعّر وبنوده
   const wtd = await pg.evaluate(async () => {
-    performSearch('العطاء الموزون');
+    const out = {};
+    for (const t of ['العطاء الموزون', 'العرض الموزون']) {
+      performSearch(t);
+      await new Promise(r => setTimeout(r, 500));
+      out[t] = [...document.querySelectorAll('.result-card')].map(b => b.dataset.id).includes('a4-exclusion-20-percent-unbalanced');
+    }
+    performSearch('الأسعار الموزونة');
     await new Promise(r => setTimeout(r, 500));
     const ids = () => [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
     const before = ids();
     const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
     if (add) add.click();
     await new Promise(r => setTimeout(r, 300));
-    return { direct: before.length, offered: !!add, reached: ids().includes('a4-exclusion-20-percent-unbalanced') };
+    out.conceptOffered = !!add;
+    out.conceptReached = before.length === 0 && ids().includes('a4-exclusion-20-percent-unbalanced');
+    return out;
   });
-  check('بحث «العطاء الموزون» يقترح جدول الكميات المسعّر ويصل إلى سادساً / 5 بالضغط',
-    wtd.direct === 0 && wtd.offered && wtd.reached, wtd);
+  check('بحث «العطاء الموزون» و«العرض الموزون» يُظهران سادساً / 5 مباشرة، و«الأسعار الموزونة» تصل إليه بالاقتراح',
+    wtd['العطاء الموزون'] && wtd['العرض الموزون'] && wtd.conceptOffered && wtd.conceptReached, wtd);
 
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);
