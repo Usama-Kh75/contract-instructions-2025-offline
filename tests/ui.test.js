@@ -243,27 +243,35 @@ async function run(dev, browser) {
     liq.entity && liq.hidden && liq.offered && liq.works && liq.services, liq);
 
   // «العطاء الموزون» لفظ الميدان ولا يرد في النص: كلمة مفتاحية على ضوابط (4) سادساً / 5،
-  // فتظهر مباشرة بلا ضغط، ويبقى شريط المفهوم يعرض جدول الكميات المسعّر وبنوده
+  // فتظهر مباشرة بلا ضغط بصيغها كلها، وتحمل وسماً يقول إن اللفظ مفهومي لا حرفي،
+  // ويقول الشريط الأمر نفسه ويقترح بنود جدول الكميات المسعّر
   const wtd = await pg.evaluate(async () => {
     const out = {};
-    for (const t of ['العطاء الموزون', 'العرض الموزون']) {
+    const ids = () => [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
+    for (const t of ['العطاء الموزون', 'عطاء موزون', 'العرض الموزون', 'عرض موزون', 'موزون']) {
       performSearch(t);
       await new Promise(r => setTimeout(r, 500));
-      out[t] = [...document.querySelectorAll('.result-card')].map(b => b.dataset.id).includes('a4-exclusion-20-percent-unbalanced');
+      out[t] = ids().includes('a4-exclusion-20-percent-unbalanced');
     }
-    performSearch('الأسعار الموزونة');
+    performSearch('العطاء الموزون');
     await new Promise(r => setTimeout(r, 500));
-    const ids = () => [...document.querySelectorAll('.result-card')].map(b => b.dataset.id);
-    const before = ids();
-    const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
-    if (add) add.click();
-    await new Promise(r => setTimeout(r, 300));
-    out.conceptOffered = !!add;
-    out.conceptReached = before.length === 0 && ids().includes('a4-exclusion-20-percent-unbalanced');
+    const card = document.querySelector('.result-card[data-id="a4-exclusion-20-percent-unbalanced"]');
+    out.tag = !!card && !!card.querySelector('.via-concept');
+    out.notice = (document.querySelector('.concept-bar') || {}).textContent?.includes('لا يرد حرفياً في التعليمات') || false;
+    for (const t of ['الأسعار الموزونة', 'العطاءات الموزونة']) {
+      performSearch(t);
+      await new Promise(r => setTimeout(r, 500));
+      const before = ids();
+      const add = [...document.querySelectorAll('.concept-bar button')].find(b => b.textContent.includes('أضِف'));
+      if (add) add.click();
+      await new Promise(r => setTimeout(r, 300));
+      out['via ' + t] = before.length === 0 && !!add && ids().includes('a4-exclusion-20-percent-unbalanced');
+    }
     return out;
   });
-  check('بحث «العطاء الموزون» و«العرض الموزون» يُظهران سادساً / 5 مباشرة، و«الأسعار الموزونة» تصل إليه بالاقتراح',
-    wtd['العطاء الموزون'] && wtd['العرض الموزون'] && wtd.conceptOffered && wtd.conceptReached, wtd);
+  check('«العطاء الموزون» بصيغه كلها يُظهر سادساً / 5 مباشرة موسوماً بأنه مفهومي، والجمع والأسعار تصل إليه بالاقتراح',
+    wtd['العطاء الموزون'] && wtd['عطاء موزون'] && wtd['العرض الموزون'] && wtd['عرض موزون'] && wtd['موزون'] &&
+    wtd.tag && wtd.notice && wtd['via الأسعار الموزونة'] && wtd['via العطاءات الموزونة'], wtd);
 
   await pg.evaluate(() => performSearch('التأمينات الأولية'));
   await sleep(700);

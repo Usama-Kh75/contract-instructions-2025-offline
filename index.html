@@ -1499,6 +1499,7 @@
     }
 
     .via-loose { opacity: 0.6; }
+    .via-concept { border-style: dashed; }
 
     .via-tag {
       display: inline-block;
@@ -18383,6 +18384,8 @@
         "جدول الكميات المسعر",
         "العطاء الموزون",
         "العرض الموزون",
+        "عطاء موزون",
+        "عرض موزون",
         "الاحالة"
       ],
       "article": "ضوابط رقم (4)",
@@ -25461,7 +25464,7 @@
       "endPage": 55
     }
   ],
-  "integrity": "cf40681a",
+  "integrity": "7d5f41fe",
   "version": "1.27",
   "releaseDate": "2026-10-04",
   "credit": "إعداد المهندس أسامة خليل هاشم",
@@ -25741,6 +25744,8 @@
         "العطاء الموزون",
         "العرض الموزون",
         "الأسعار الموزونة",
+        "العطاءات الموزونة",
+        "العروض الموزونة",
         "جدول الكميات المسعر من جهة التعاقد"
       ],
       "note": "«الموزون» لفظ الميدان ولا يرد في النص. المقصود جدول الكميات الذي تعتمده جهة التعاقد بدلاً من جدول العطاء، بتعديل أسعار الفقرات بنسبة مبلغ العطاء الفائز، وذلك إذا زادت الفقرات غير المتوازنة (الزائدة على 20% لكل فقرة) على 10% من عدد الفقرات الكلي (الضوابط رقم (4) / سادساً / 5)."
@@ -26668,6 +26673,21 @@
              x.official.includes(nq) || x.explain.includes(nq);
     }
 
+    // The query reached this clause through its keywords alone: the phrase is
+    // in none of the title, the printed text or the explanation. The reader
+    // must be told - a clause shown for «العطاء الموزون» looks as though the
+    // instructions say so, and they do not. Field usage is not the document.
+    function keywordOnly(c, nq) {
+      const x = idxById.get(c.id);
+      if (!x || !nq) return false;
+      return x.keywords.includes(nq) &&
+             !x.title.includes(nq) && !x.official.includes(nq) && !x.explain.includes(nq);
+    }
+
+    // true when no clause carries the phrase in its own words
+    const nowhereLiteral = nq => !idx.some(x =>
+      x.title.includes(nq) || x.official.includes(nq) || x.explain.includes(nq));
+
     // --- Install as an app (web copy only) ---
     // Chrome/Edge (Android and desktop) offer the install through a captured event; iOS
     // has no such event at all - the only route is Share > Add to Home Screen,
@@ -27564,6 +27584,8 @@
         }
         if (via) body.append(node('span', 'via-tag', 'عُثر عليه بصيغة: ' + via));
         else if (tag) body.append(node('span', 'via-tag via-loose', tag));
+        else if (keywordOnly(c, nq)) body.append(node('span', 'via-tag via-concept',
+          'مصطلح مفاهيمي — لا يرد حرفياً في نص التعليمات'));
         b.append(body, node('span', 'check', '✓'));
         b.addEventListener('click', () => selectResult(c.id));
         return b;
@@ -27624,6 +27646,9 @@
           }
         } else {
           const bar = node('div', 'concept-bar');
+          if (nowhereLiteral(nq)) bar.append(node('p', 'concept-note',
+            'تنبيه: «' + lastQuery.trim() + '» مصطلح مفاهيمي من ألفاظ الميدان، ولا يرد حرفياً في التعليمات. ' +
+            'والبنود المقترحة أدناه تقابله بألفاظ المستند نفسه.'));
           bar.append(node('p', '',
             'يسمّي المستند هذا المفهوم أيضاً: ' + found.wordings.join('، ') +
             ' — وتضيف ' + countAr(found.extras.length, 'بند') + ' إلى نتائجك.'));
